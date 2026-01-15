@@ -1,0 +1,334 @@
+-- このファイルはビジュアル選択からファイル一覧を抽出する補助処理を提供します。
+---Visual command handling module for Codex.nvim
+---Implements neo-tree-style visual mode exit and command processing
+---@module 'codex.visual_commands'
+local M = {}
+local logger = require("codex.logger")
+
+---Get current vim mode with fallback for test environments
+---@param full_mode? boolean Whether to get full mode info (passed to vim.fn.mode)
+---@return string current_mode The current vim mode
+local function get_current_mode(full_mode)
+  local current_mode = "n" -- Default fallback
+
+  pcall(function()
+    if vim.api and vim.api.nvim_get_mode then
+      current_mode = vim.api.nvim_get_mode().mode
+    else
+      current_mode = vim.fn.mode(full_mode)
+    end
+  end)
+
+  return current_mode
+end
+
+---ESC key constant matching neo-tree's implementation
+local ESC_KEY
+local success = pcall(function()
+  ESC_KEY = vim.api.nvim_replace_termcodes("<Esc>", true, false, true)
+end)
+if not success then
+  ESC_KEY = "\27"
+end
+
+---Exit visual mode properly and schedule command execution
+---@param callback function The function to call after exiting visual mode
+---@param ... any Arguments to pass to the callback
+function M.exit_visual_and_schedule(callback, ...)
+  local args = { ... }
+
+  -- Capture visual selection data BEFORE exiting visual mode
+  local visual_data = M.capture_visual_selection_data()
+
+  if visual_data and visual_data.tree_type == "neo-tree" then
+    logger.debug(
+      "visual_commands/neotree",
+      "captured visual before exit",
+      "range=",
+      visual_data.start_pos,
+      "to",
+      visual_data.end_pos
+    )
+  end
+
+  pcall(function()
+    vim.api.nvim_feedkeys(ESC_KEY, "i", true)
+  end)
+
+  -- Schedule execution until after mode change (neo-tree pattern)
+  local schedule_fn = vim.schedule or function(fn)
+    fn()
+  end -- Fallback for test environments
+  schedule_fn(function()
+    -- Pass the captured visual data as the first argument
+    callback(visual_data, unpack(args))
+  end)
+end
+
+---Validate that we're currently in a visual mode
+---@return boolean valid true if in visual mode, false otherwise
+---@return string? error error message if not in visual mode
+function M.validate_visual_mode()
+  local current_mode = get_current_mode(true)
+
+  local is_visual = current_mode == "v" or current_mode == "V" or current_mode == "\022"
+
+  -- Additional debugging: check visual marks and cursor position
+  if is_visual then
+    pcall(function()
+      vim.api.nvim_win_get_cursor(0)
+      vim.fn.getpos("'<")
+      vim.fn.getpos("'>")
+      vim.fn.getpos("v")
+    end)
+  end
+
+  if not is_visual then
+    return false, "Not in visual mode (current mode: " .. current_mode .. ")"
+  end
+
+  return true, nil
+end
+
+---Get visual selection range using vim marks or current cursor position
+---@return number start_line, number end_line (1-indexed)
+function M.get_visual_range()
+  local start_pos, end_pos = 1, 1 -- Default fallback
+
+  -- Use pcall to handle test environments
+  local range_success = pcall(function()
+    -- Check if we're currently in visual mode
+    local current_mode = get_current_mode(true)
+    local is_visual = current_mode == "v" or current_mode == "V" or current_mode == "\022"
+
+    if is_visual then
+      -- In visual mode, ALWAYS use cursor + anchor (marks are stale until exit)
+      local cursor_pos = vim.api.nvim_win_get_cursor(0)[1]
+      local anchor_pos = vim.fn.getpos("v")[2]
+
+      if anchor_pos > 0 then
+        start_pos = math.min(cursor_pos, anchor_pos)
+        end_pos = math.max(cursor_pos, anchor_pos)
+      else
+        -- Fallback: just use current cursor position
+        start_pos = cursor_pos
+        end_pos = cursor_pos
+      end
+    else
+      -- Not in visual mode, try to use the marks (they should be valid now)
+      local mark_start = vim.fn.getpos("'<")[2]
+      local mark_end = vim.fn.getpos("'>")[2]
+
+      if mark_start > 0 and mark_end > 0 then
+        start_pos = mark_start
+        end_pos = mark_end
+      else
+        -- No valid marks, use cursor position
+        local cursor_pos = vim.api.nvim_win_get_cursor(0)[1]
+        start_pos = cursor_pos
+        end_pos = cursor_pos
+      end
+    end
+  end)
+
+  if not range_success then
+    return 1, 1
+  end
+
+  if end_pos < start_pos then
+    start_pos, end_pos = end_pos, start_pos
+  end
+
+  -- Ensure we have valid line numbers (at least 1)
+  start_pos = math.max(1, start_pos)
+  end_pos = math.max(1, end_pos)
+
+  return start_pos, end_pos
+end
+
+---Check if we're in a tree buffer and get the tree state
+---neo-treeのみを対象とする
+---@return table? tree_state, string? tree_type ("neo-tree")
+function M.get_tree_state()
+  local current_ft = "" -- Default fallback
+  local current_win = 0 -- Default fallback
+
+  -- Use pcall to handle test environments
+  local state_success = pcall(function()
+    current_ft = vim.bo.filetype or ""
+    current_win = vim.api.nvim_get_current_win()
+  end)
+
+  if not state_success then
+    return nil, nil
+  end
+
+  if current_ft == "neo-tree" then
+    local manager_success, manager = pcall(require, "neo-tree.sources.manager")
+    if not manager_success then
+      return nil, nil
+    end
+
+    local state = manager.get_state("filesystem")
+    if not state then
+      return nil, nil
+    end
+
+    -- Validate we're in the correct neo-tree window
+    if state.winid and state.winid == current_win then
+      logger.debug("visual_commands/neotree", "tree state detected for current window", "win=", current_win)
+      return state, "neo-tree"
+    else
+      logger.debug(
+        "visual_commands/neotree",
+        "tree state win mismatch",
+        "current_win=",
+        current_win,
+        "state.winid=",
+        tostring(state.winid)
+      )
+      return nil, nil
+    end
+  else
+    return nil, nil
+  end
+end
+
+---Create a visual command wrapper that follows neo-tree patterns
+---@param normal_handler function The normal command handler
+---@param visual_handler function The visual command handler
+---@return function wrapped_func The wrapped command function
+function M.create_visual_command_wrapper(normal_handler, visual_handler)
+  return function(...)
+    local current_mode = get_current_mode(true)
+
+    if current_mode == "v" or current_mode == "V" or current_mode == "\022" then
+      -- Use the neo-tree pattern: exit visual mode, then schedule execution
+      M.exit_visual_and_schedule(visual_handler, ...)
+    else
+      normal_handler(...)
+    end
+  end
+end
+
+---Capture visual selection data while still in visual mode
+---@return table|nil visual_data Captured data or nil if not in visual mode
+function M.capture_visual_selection_data()
+  local valid = M.validate_visual_mode()
+  if not valid then
+    return nil
+  end
+
+  local start_pos, end_pos = M.get_visual_range()
+
+  -- Validate that we have a meaningful range
+  if start_pos == 0 or end_pos == 0 then
+    return nil
+  end
+
+  -- ビジュアル解除前の行範囲を保持し、後続の送信処理で行番号が失われないようにする
+  local tree_state, tree_type = M.get_tree_state()
+
+  return {
+    tree_state = tree_state,
+    tree_type = tree_type,
+    start_pos = start_pos,
+    end_pos = end_pos,
+  }
+end
+
+---Extract files from visual selection in tree buffers
+---@param visual_data table? Pre-captured visual selection data
+---@return table files List of file paths
+---@return string? error Error message if failed
+function M.get_files_from_visual_selection(visual_data)
+  -- If we have pre-captured data, use it; otherwise try to get current data
+  local tree_state, tree_type, start_pos, end_pos
+
+  if visual_data then
+    tree_state = visual_data.tree_state
+    tree_type = visual_data.tree_type
+    start_pos = visual_data.start_pos
+    end_pos = visual_data.end_pos
+  else
+    local valid, err = M.validate_visual_mode()
+    if not valid then
+      return {}, err
+    end
+
+    tree_state, tree_type = M.get_tree_state()
+    if not tree_state then
+      return {}, "Not in a supported tree buffer"
+    end
+
+    start_pos, end_pos = M.get_visual_range()
+  end
+
+  if not tree_state then
+    return {}, "Not in a supported tree buffer"
+  end
+
+  local files = {}
+
+  if tree_type == "neo-tree" then
+    logger.debug("visual_commands/neotree", "processing visual selection", "range=", start_pos, "to", end_pos)
+    local selected_nodes = {}
+    for line = start_pos, end_pos do
+      -- Neo-tree's tree:get_node() uses the line number directly (1-based)
+      local node = tree_state.tree:get_node(line)
+      if node then
+        if node.type and node.type ~= "message" then
+          table.insert(selected_nodes, node)
+          local depth = (node.get_depth and node:get_depth()) or 0
+          logger.debug(
+            "visual_commands/neotree",
+            "line",
+            line,
+            "node type=",
+            tostring(node.type),
+            "depth=",
+            depth,
+            "path=",
+            tostring(node.path)
+          )
+        else
+          logger.debug("visual_commands/neotree", "line", line, "node rejected (type)", tostring(node and node.type))
+        end
+      else
+        logger.debug("visual_commands/neotree", "line", line, "no node returned from tree:get_node")
+      end
+    end
+
+    logger.debug("visual_commands/neotree", "selected_nodes count=", #selected_nodes)
+
+    for _, node in ipairs(selected_nodes) do
+      if node.type == "file" and node.path and node.path ~= "" then
+        local depth = (node.get_depth and node:get_depth()) or 0
+        if depth > 1 then
+          table.insert(files, node.path)
+        else
+          logger.debug("visual_commands/neotree", "rejected file (depth<=1)", node.path)
+        end
+      elseif node.type == "directory" and node.path and node.path ~= "" then
+        local depth = (node.get_depth and node:get_depth()) or 0
+        if depth > 1 then
+          table.insert(files, node.path)
+        else
+          logger.debug("visual_commands/neotree", "rejected directory (depth<=1)", node.path)
+        end
+      else
+        logger.debug(
+          "visual_commands/neotree",
+          "rejected node (missing path or unsupported type)",
+          tostring(node and node.type),
+          tostring(node and node.path)
+        )
+      end
+    end
+    logger.debug("visual_commands/neotree", "files from visual selection:", files)
+  end
+
+  return files, nil
+end
+
+return M

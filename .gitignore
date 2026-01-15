@@ -1,3 +1,4 @@
+# このファイルはCodex.nvimの開発で不要な生成物を除外するための設定をまとめています。
 # Compiled Lua sources
 luac.out
 
