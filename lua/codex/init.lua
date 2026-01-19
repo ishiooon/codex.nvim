@@ -9,6 +9,7 @@
 local M = {}
 
 local logger = require("codex.logger")
+local mention = require("codex.mention")
 
 --- Current plugin version
 ---@type CodexVersion
@@ -280,6 +281,37 @@ function M._ensure_terminal_visible_if_connected()
   return true
 end
 
+local function should_skip_terminal_fallback(context)
+  -- 選択送信は別の経路でターミナル入力を更新するため、ここでは除外する
+  return context == "CodexSend" or context == "CodexSend_visual"
+end
+
+local function format_at_mention_path(file_path)
+  -- 送信対象のパス表記を統一してから@メンションへ利用する
+  if type(file_path) ~= "string" or file_path == "" then
+    return nil
+  end
+
+  local ok, formatted_path = pcall(M._format_path_for_at_mention, file_path)
+  if ok and type(formatted_path) == "string" and formatted_path ~= "" then
+    return formatted_path
+  end
+
+  return file_path
+end
+
+local function build_at_mention_text(formatted_path, start_line, end_line)
+  if type(formatted_path) ~= "string" or formatted_path == "" then
+    return nil
+  end
+
+  local range_text = mention.format_range(start_line, end_line)
+  if range_text ~= "" then
+    return "@" .. formatted_path .. ":" .. range_text
+  end
+  return "@" .. formatted_path
+end
+
 ---Send @ mention to Codex, handling connection state automatically
 ---@param file_path string The file path to send
 ---@param start_line number|nil Start line (0-indexed for Codex)
@@ -311,13 +343,24 @@ function M.send_at_mention(file_path, start_line, end_line, context)
     return success, error_msg
   else
     -- Codex not connected, queue the mention and launch terminal
-    queue_mention(file_path, start_line, end_line)
+    local formatted_path = format_at_mention_path(file_path) or file_path
+    queue_mention(formatted_path, start_line, end_line)
 
     -- Launch terminal with Codex
     local terminal = require("codex.terminal")
     terminal.open()
 
-    logger.debug(context, "Queued @ mention and launched Codex: " .. file_path)
+    local config = M.state.config or {}
+    local allow_fallback = config.fallback_to_terminal_send ~= false
+    if allow_fallback and not should_skip_terminal_fallback(context) then
+      local mention_text = build_at_mention_text(formatted_path, start_line, end_line)
+      if mention_text and mention_text ~= "" then
+        -- ターミナルの入力欄へ@メンションを差し込む
+        terminal.send(mention_text .. " ", { submit = false })
+      end
+    end
+
+    logger.debug(context, "Queued @ mention and launched Codex: " .. tostring(formatted_path))
 
     return true, nil
   end

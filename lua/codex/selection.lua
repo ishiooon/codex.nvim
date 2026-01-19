@@ -6,6 +6,7 @@ local M = {}
 local logger = require("codex.logger")
 local terminal = require("codex.terminal")
 local terminal_buffer = require("codex.terminal.buffer")
+local mention = require("codex.mention")
 
 M.state = {
   latest_selection = nil,
@@ -670,28 +671,6 @@ local function build_selection_for_at_mention(selection, formatted_path)
   return aligned
 end
 
----ターミナルへのフォールバック送信に使う範囲表記を生成する
----@param selection table
----@return string
-local function format_fallback_range(selection)
-  if not selection or not selection.selection then
-    return ""
-  end
-
-  local start_line = selection.selection.start and selection.selection.start.line
-  local end_line = selection.selection["end"] and selection.selection["end"].line
-  if type(start_line) ~= "number" or type(end_line) ~= "number" then
-    return ""
-  end
-
-  local display_start = start_line + 1
-  local display_end = end_line + 1
-  if display_start == display_end then
-    return tostring(display_start)
-  end
-  return string.format("%d-%d", display_start, display_end)
-end
-
 ---Codex未接続時にターミナルへ流し込む本文を作る
 ---@param selection table
 ---@return string
@@ -701,7 +680,11 @@ local function build_terminal_fallback_payload(selection)
   end
 
   local file_path = selection.filePath or ""
-  local range_text = format_fallback_range(selection)
+  -- 画面表示用に1始まりの行番号へ整形する
+  local range_text = mention.format_range(
+    selection.selection and selection.selection.start and selection.selection.start.line,
+    selection.selection and selection.selection["end"] and selection.selection["end"].line
+  )
   local header = file_path ~= "" and ("@" .. file_path) or "@selection"
   if range_text ~= "" then
     header = header .. ":" .. range_text
