@@ -41,10 +41,7 @@ M.defaults = {
     mappings = {
       { mode = "n", lhs = "<leader>cc", rhs = "<cmd>Codex<cr>", desc = "Codex: Toggle" },
       { mode = "n", lhs = "<leader>cf", rhs = "<cmd>CodexFocus<cr>", desc = "Codex: Focus" },
-      { mode = "n", lhs = "<leader>cr", rhs = "<cmd>Codex --resume<cr>", desc = "Codex: Resume" },
-      { mode = "n", lhs = "<leader>cC", rhs = "<cmd>Codex --continue<cr>", desc = "Codex: Continue" },
-      { mode = "n", lhs = "<leader>cm", rhs = "<cmd>CodexSelectModel<cr>", desc = "Codex: モデル選択" },
-      { mode = "n", lhs = "<leader>cb", rhs = "<cmd>CodexAdd %<cr>", desc = "Codex: 現在のバッファを追加" },
+      -- 既定キーマップは動作確認済みのコマンドに限定する
       { mode = "v", lhs = "<leader>cs", rhs = "<cmd>CodexSend<cr>", desc = "Codex: 選択範囲を送信" },
       {
         mode = "n",
@@ -54,8 +51,7 @@ M.defaults = {
         -- neo-treeのみを対象にする
         filetypes = { "neo-tree" },
       },
-      { mode = "n", lhs = "<leader>ca", rhs = "<cmd>CodexDiffAccept<cr>", desc = "Codex: 差分を受け入れ" },
-      { mode = "n", lhs = "<leader>cd", rhs = "<cmd>CodexDiffDeny<cr>", desc = "Codex: 差分を拒否" },
+      -- 差分操作のキーマップは必要に応じて利用者側で追加する
     },
   },
   terminal = nil, -- Will be lazy-loaded to avoid circular dependency

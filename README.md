@@ -13,6 +13,7 @@ Codex を Neovim から扱うための IDE 統合プラグインです。Claude 
 
 ## インストール（lazy.nvim の例）
 
+<!-- 既定のキーマップ例は動作確認済みのものだけ記載しています。 -->
 ```lua
 {
   dir = "/home/dev_local/dev_plugin/codex.nvim",
@@ -21,10 +22,6 @@ Codex を Neovim から扱うための IDE 統合プラグインです。Claude 
   keys = {
     { "<leader>cc", "<cmd>Codex<cr>", desc = "Codex: Toggle" },
     { "<leader>cf", "<cmd>CodexFocus<cr>", desc = "Codex: Focus" },
-    { "<leader>cr", "<cmd>Codex --resume<cr>", desc = "Codex: Resume" },
-    { "<leader>cC", "<cmd>Codex --continue<cr>", desc = "Codex: Continue" },
-    { "<leader>cm", "<cmd>CodexSelectModel<cr>", desc = "Codex: モデル選択" },
-    { "<leader>cb", "<cmd>CodexAdd %<cr>", desc = "Codex: 現在のバッファを追加" },
     { "<leader>cs", "<cmd>CodexSend<cr>", mode = "v", desc = "Codex: 選択範囲を送信" },
     {
       "<leader>cs",
@@ -32,8 +29,6 @@ Codex を Neovim から扱うための IDE 統合プラグインです。Claude 
       desc = "Codex: ファイルを追加",
       ft = { "neo-tree" },
     },
-    { "<leader>ca", "<cmd>CodexDiffAccept<cr>", desc = "Codex: 差分を受け入れ" },
-    { "<leader>cd", "<cmd>CodexDiffDeny<cr>", desc = "Codex: 差分を拒否" },
   },
 }
 ```
@@ -51,7 +46,6 @@ neo-tree のポップアップ（filetype: neo-tree-popup）にも同じキー�
 2. 選択範囲をビジュアルモードで選び、`:CodexSend` で送信します
 3. ツリー表示（neo-tree）では `:CodexTreeAdd` が使えます
 neo-tree以外のツリー表示には対応しません。
-4. Codex が差分を提示した場合は `:CodexDiffAccept` / `:CodexDiffDeny` で操作します
 
 ## Codex CLI のパスを明示する場合
 
@@ -106,10 +100,6 @@ will continue to be improved.
   keys = {
     { "<leader>cc", "<cmd>Codex<cr>", desc = "Codex: Toggle" },
     { "<leader>cf", "<cmd>CodexFocus<cr>", desc = "Codex: Focus" },
-    { "<leader>cr", "<cmd>Codex --resume<cr>", desc = "Codex: Resume" },
-    { "<leader>cC", "<cmd>Codex --continue<cr>", desc = "Codex: Continue" },
-    { "<leader>cm", "<cmd>CodexSelectModel<cr>", desc = "Codex: Select model" },
-    { "<leader>cb", "<cmd>CodexAdd %<cr>", desc = "Codex: Add current buffer" },
     { "<leader>cs", "<cmd>CodexSend<cr>", mode = "v", desc = "Codex: Send selection" },
     {
       "<leader>cs",
@@ -117,8 +107,6 @@ will continue to be improved.
       desc = "Codex: Add file",
       ft = { "neo-tree" },
     },
-    { "<leader>ca", "<cmd>CodexDiffAccept<cr>", desc = "Codex: Accept diff" },
-    { "<leader>cd", "<cmd>CodexDiffDeny<cr>", desc = "Codex: Deny diff" },
   },
 }
 ```
@@ -135,7 +123,6 @@ will continue to be improved.
 2. Select text in visual mode and run `:CodexSend`
 3. From tree views (neo-tree), use `:CodexTreeAdd`
 Neo-tree is the only supported tree view.
-4. Accept or deny diffs with `:CodexDiffAccept` / `:CodexDiffDeny`
 
 ## Specify Codex CLI path
 

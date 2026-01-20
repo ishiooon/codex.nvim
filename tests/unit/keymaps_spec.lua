@@ -79,13 +79,9 @@ describe("codex.keymaps", function()
 
     expect(vim._keymaps.n["<leader>cc"].rhs).to_be("<cmd>Codex<cr>")
     expect(vim._keymaps.n["<leader>cf"].rhs).to_be("<cmd>CodexFocus<cr>")
-    expect(vim._keymaps.n["<leader>cr"].rhs).to_be("<cmd>Codex --resume<cr>")
-    expect(vim._keymaps.n["<leader>cC"].rhs).to_be("<cmd>Codex --continue<cr>")
-    expect(vim._keymaps.n["<leader>cm"].rhs).to_be("<cmd>CodexSelectModel<cr>")
-    expect(vim._keymaps.n["<leader>cb"].rhs).to_be("<cmd>CodexAdd %<cr>")
+    -- 利用できない既定キーマップはREADMEと合わせて除外する
     expect(vim._keymaps.v["<leader>cs"].rhs).to_be("<cmd>CodexSend<cr>")
-    expect(vim._keymaps.n["<leader>ca"].rhs).to_be("<cmd>CodexDiffAccept<cr>")
-    expect(vim._keymaps.n["<leader>cd"].rhs).to_be("<cmd>CodexDiffDeny<cr>")
+    -- 差分操作の既定キーマップは案内対象から外したため、ここでは検証しない
   end)
 
   it("ファイルツリー向けのキーマップをFileTypeで登録する", function()
