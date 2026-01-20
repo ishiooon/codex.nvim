@@ -134,8 +134,8 @@ local function open_terminal(cmd_string, env_table, effective_config, focus)
   winid = new_winid
   bufnr = vim.api.nvim_get_current_buf()
   vim.bo[bufnr].bufhidden = "hide"
-  -- Codex ターミナル用バッファとして識別し、表示名と一覧表示を調整する
-  terminal_buffer.mark_terminal_buffer(bufnr)
+  -- Codex ターミナル用バッファとして識別し、フォーカス解除キーも反映する
+  terminal_buffer.mark_terminal_buffer(bufnr, effective_config)
   -- buftype=terminal is set by termopen
 
   if focus then
@@ -303,7 +303,7 @@ function M.open(cmd_string, env_table, effective_config, focus)
       bufnr = existing_buf
       winid = existing_win
       -- 既存バッファにも表示名と一覧表示の調整を適用する
-      terminal_buffer.mark_terminal_buffer(existing_buf)
+      terminal_buffer.mark_terminal_buffer(existing_buf, effective_config)
       -- Note: We can't recover the job ID easily, but it's less critical
       logger.debug("terminal", "Recovered existing Codex terminal")
       if focus then
@@ -350,7 +350,7 @@ function M.simple_toggle(cmd_string, env_table, effective_config)
         -- Recover the existing terminal
         bufnr = existing_buf
         winid = existing_win
-        terminal_buffer.mark_terminal_buffer(existing_buf)
+        terminal_buffer.mark_terminal_buffer(existing_buf, effective_config)
         logger.debug("terminal", "Recovered existing Codex terminal")
         focus_terminal()
       else
@@ -399,7 +399,7 @@ function M.focus_toggle(cmd_string, env_table, effective_config)
       -- Recover the existing terminal
       bufnr = existing_buf
       winid = existing_win
-      terminal_buffer.mark_terminal_buffer(existing_buf)
+      terminal_buffer.mark_terminal_buffer(existing_buf, effective_config)
       logger.debug("terminal", "Recovered existing Codex terminal")
 
       -- Check if we're currently in this recovered terminal

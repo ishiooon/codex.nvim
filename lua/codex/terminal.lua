@@ -5,6 +5,8 @@
 
 local M = {}
 
+local terminal_buffer = require("codex.terminal.buffer")
+
 ---@type CodexTerminalConfig
 local defaults = {
   split_side = "right",
@@ -22,6 +24,9 @@ local defaults = {
   cwd = nil, -- static cwd override
   git_repo_cwd = false, -- resolve to git root when spawning
   cwd_provider = nil, -- function(ctx) -> cwd string
+  -- Codex ターミナルのフォーカスを外すためのキーマップ設定
+  unfocus_key = terminal_buffer.unfocus_defaults.key,
+  unfocus_mapping = terminal_buffer.unfocus_defaults.mapping,
 }
 
 M.defaults = defaults
@@ -225,6 +230,12 @@ local function build_config(opts_override)
         end
         return false
       end,
+      unfocus_key = function(val)
+        return val == false or type(val) == "string"
+      end,
+      unfocus_mapping = function(val)
+        return type(val) == "string"
+      end,
     }
     for key, val in pairs(opts_override) do
       if effective_config[key] ~= nil and validators[key] and validators[key](val) then
@@ -269,6 +280,9 @@ local function build_config(opts_override)
     auto_close = effective_config.auto_close,
     snacks_win_opts = effective_config.snacks_win_opts,
     cwd = resolved_cwd,
+    -- Codex ターミナルのフォーカス解除キーマップを伝播する
+    unfocus_key = effective_config.unfocus_key,
+    unfocus_mapping = effective_config.unfocus_mapping,
   }
 end
 
@@ -542,6 +556,18 @@ function M.setup(user_term_config, p_terminal_cmd, p_env)
         defaults.snacks_win_opts = v
       else
         vim.notify("codex.terminal.setup: Invalid value for snacks_win_opts", vim.log.levels.WARN)
+      end
+    elseif k == "unfocus_key" then
+      if v == false or type(v) == "string" then
+        defaults.unfocus_key = v
+      else
+        vim.notify("codex.terminal.setup: Invalid value for unfocus_key: " .. tostring(v), vim.log.levels.WARN)
+      end
+    elseif k == "unfocus_mapping" then
+      if type(v) == "string" or v == nil then
+        defaults.unfocus_mapping = v
+      else
+        vim.notify("codex.terminal.setup: Invalid value for unfocus_mapping: " .. tostring(v), vim.log.levels.WARN)
       end
     elseif k == "cwd" then
       if v == nil or type(v) == "string" then

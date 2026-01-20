@@ -134,8 +134,8 @@ function M.open(cmd_string, env_table, config, focus)
   if term_instance and term_instance:buf_valid() then
     setup_terminal_events(term_instance, config)
     terminal = term_instance
-    -- Codex ターミナル用バッファとして識別し、表示名と一覧表示を調整する
-    terminal_buffer.mark_terminal_buffer(term_instance.buf)
+    -- Codex ターミナル用バッファとして識別し、フォーカス解除キーも反映する
+    terminal_buffer.mark_terminal_buffer(term_instance.buf, config)
   else
     terminal = nil
     local logger = require("codex.logger")

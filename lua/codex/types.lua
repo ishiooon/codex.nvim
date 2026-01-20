@@ -101,6 +101,8 @@
 ---@field cwd string|nil                 -- static working directory for Codex terminal
 ---@field git_repo_cwd boolean|nil      -- use git root of current file/cwd as working directory
 ---@field cwd_provider? CodexCwdProvider -- custom function to compute working directory
+---@field unfocus_key string|false|nil  -- Codex ターミナルから前のウィンドウへ戻るためのキー
+---@field unfocus_mapping string|nil    -- ターミナルモードで実行する移動コマンド
 
 -- Port range configuration
 ---@class CodexPortRange

@@ -47,6 +47,22 @@ neo-tree のポップアップ（filetype: neo-tree-popup）にも同じキー�
 3. ツリー表示（neo-tree）では `:CodexTreeAdd` が使えます
 neo-tree以外のツリー表示には対応しません。
 
+## ターミナルから前のウィンドウへ戻るキー
+
+既定は `Ctrl-]` で前のウィンドウへ戻ります。macOS で `Cmd-]` にしたい場合は `terminal.unfocus_key` を設定してください。
+
+```lua
+require("codex").setup({
+  terminal = {
+    unfocus_key = "<D-]>", -- Cmd-] でフォーカスを戻す
+  },
+})
+```
+
+## Issue と PR について
+
+Issue や PR 歓迎です。バグ報告や改善提案を気軽にお寄せください。
+
 ## Codex CLI のパスを明示する場合
 
 Codex CLI が通常のパスに無い場合は `terminal_cmd` を指定してください。
