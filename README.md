@@ -1,3 +1,79 @@
+# codex.nvim (English)
+
+<!-- 操作イメージは主要な操作の流れが一目で分かる短い録画を掲載する -->
+![操作イメージ](codex.nvim.gif)
+
+A Neovim IDE integration for Codex. It follows the original architecture of the Claude Code integration and adapts it for Codex.
+will continue to be improved.
+
+## Highlights
+
+- Pure Lua implementation with minimal dependencies
+- Built-in WebSocket MCP (Model Context Protocol)
+- Safe in-editor Codex terminal control
+- Send selections or files as @ mentions to Codex
+- Accept or reject diffs inside Neovim
+
+## Installation (lazy.nvim example)
+
+```lua
+{
+  dir = "/home/dev_local/dev_plugin/codex.nvim",
+  dependencies = { "folke/snacks.nvim" },
+  config = true,
+  keys = {
+    { "<leader>cc", "<cmd>Codex<cr>", desc = "Codex: Toggle" },
+    { "<leader>cf", "<cmd>CodexFocus<cr>", desc = "Codex: Focus" },
+    { "<leader>cs", "<cmd>CodexSend<cr>", mode = "v", desc = "Codex: Send selection" },
+    {
+      "<leader>cs",
+      "<cmd>CodexTreeAdd<cr>",
+      desc = "Codex: Add file",
+      ft = { "neo-tree", "oil" },
+    },
+  },
+}
+```
+
+## Requirements
+
+- Neovim 0.8+
+- Codex CLI installed
+- `folke/snacks.nvim` recommended for terminal UX
+
+## Usage
+
+1. Open the Codex terminal with `:Codex`
+2. Select text in visual mode and run `:CodexSend`
+3. From tree views (neo-tree / oil.nvim), use `:CodexTreeAdd`
+Only neo-tree and oil.nvim are supported tree views.
+
+## Specify Codex CLI path
+
+```lua
+require("codex").setup({
+  terminal_cmd = "/path/to/codex",
+})
+```
+
+## Add environment variables
+
+```lua
+require("codex").setup({
+  env = {
+    ENABLE_IDE_INTEGRATION = "true",
+    CODEX_CODE_SSE_PORT = "12345",
+  },
+})
+```
+
+
+## Thanks
+
+This plugin is heavily inspired by the design and implementation of `claudecode.nvim`. The repository referenced is https://github.com/coder/claudecode.nvim. Many thanks to its maintainers.
+
+---
+
 # codex.nvim
 
 Codex を Neovim から扱うための IDE 統合プラグインです。Claude Code 用に作られた設計を踏襲しつつ、Codex 用に調整しています。
@@ -90,76 +166,3 @@ require("codex").setup({
 ## 感謝
 
 本プラグインは `claudecode.nvim` の設計と実装に大きく助けられました。参考にしたリポジトリは https://github.com/coder/claudecode.nvim です。開発者の皆さまに感謝します。
-
----
-
-# codex.nvim (English)
-
-A Neovim IDE integration for Codex. It follows the original architecture of the Claude Code integration and adapts it for Codex.
-will continue to be improved.
-
-## Highlights
-
-- Pure Lua implementation with minimal dependencies
-- Built-in WebSocket MCP (Model Context Protocol)
-- Safe in-editor Codex terminal control
-- Send selections or files as @ mentions to Codex
-- Accept or reject diffs inside Neovim
-
-## Installation (lazy.nvim example)
-
-```lua
-{
-  dir = "/home/dev_local/dev_plugin/codex.nvim",
-  dependencies = { "folke/snacks.nvim" },
-  config = true,
-  keys = {
-    { "<leader>cc", "<cmd>Codex<cr>", desc = "Codex: Toggle" },
-    { "<leader>cf", "<cmd>CodexFocus<cr>", desc = "Codex: Focus" },
-    { "<leader>cs", "<cmd>CodexSend<cr>", mode = "v", desc = "Codex: Send selection" },
-    {
-      "<leader>cs",
-      "<cmd>CodexTreeAdd<cr>",
-      desc = "Codex: Add file",
-      ft = { "neo-tree", "oil" },
-    },
-  },
-}
-```
-
-## Requirements
-
-- Neovim 0.8+
-- Codex CLI installed
-- `folke/snacks.nvim` recommended for terminal UX
-
-## Usage
-
-1. Open the Codex terminal with `:Codex`
-2. Select text in visual mode and run `:CodexSend`
-3. From tree views (neo-tree / oil.nvim), use `:CodexTreeAdd`
-Only neo-tree and oil.nvim are supported tree views.
-
-## Specify Codex CLI path
-
-```lua
-require("codex").setup({
-  terminal_cmd = "/path/to/codex",
-})
-```
-
-## Add environment variables
-
-```lua
-require("codex").setup({
-  env = {
-    ENABLE_IDE_INTEGRATION = "true",
-    CODEX_CODE_SSE_PORT = "12345",
-  },
-})
-```
-
-
-## Thanks
-
-This plugin is heavily inspired by the design and implementation of `claudecode.nvim`. The repository referenced is https://github.com/coder/claudecode.nvim. Many thanks to its maintainers.

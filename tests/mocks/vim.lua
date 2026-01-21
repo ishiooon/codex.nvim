@@ -702,10 +702,19 @@ local vim = {
     end,
 
     decode = function(json_str)
-      -- This is a non-functional stub for `vim.json.decode`.
-      -- If tests require actual JSON decoding, a proper library or a more
-      -- sophisticated mock implementation would be necessary.
-      return {}
+      -- 認証トークン取得テストで必要な範囲のみを解析する簡易デコーダ
+      if type(json_str) ~= "string" then
+        return {}
+      end
+
+      local result = {}
+      for key, value in json_str:gmatch('"([^"]+)"%s*:%s*"([^"]*)"') do
+        result[key] = value
+      end
+      for key, value in json_str:gmatch('"([^"]+)"%s*:%s*(%d+)') do
+        result[key] = tonumber(value)
+      end
+      return result
     end,
   },
 

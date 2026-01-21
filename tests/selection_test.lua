@@ -90,6 +90,15 @@ if not _G.vim then
         return result
       end,
 
+      -- 現在管理しているバッファ一覧を返し、既存ターミナル探索に対応する
+      nvim_list_bufs = function()
+        local bufs = {}
+        for bufnr, _ in pairs(_G.vim._buffers) do
+          table.insert(bufs, bufnr)
+        end
+        return bufs
+      end,
+
       nvim_echo = function(chunks, history, opts)
         -- Just store the last echo message for testing
         _G.vim._last_echo = {
@@ -586,6 +595,10 @@ describe("Range Selection Tests", function()
       mock_codex_main = {
         state = {
           server = mock_server,
+          -- ターミナルへのフォールバック送信を無効化し、UI依存を避ける
+          config = {
+            fallback_to_terminal_send = false,
+          },
         },
         -- Codex側の@メンションと選択通知が同じファイル表記になるよう整形する
         _format_path_for_at_mention = function(file_path)

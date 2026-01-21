@@ -207,6 +207,8 @@ describe("Lockfile Module", function()
   local orig_vim = _G.vim
   local orig_fn_getcwd = vim.fn.getcwd
   local orig_lsp = vim.lsp
+  -- 環境変数取得の差し替えを戻すため、元の関数を保持する
+  local original_getenv = os.getenv
   -- luacheck: no ignore
 
   -- Create a mock for testing LSP client resolution
@@ -249,8 +251,17 @@ describe("Lockfile Module", function()
     end
 
     -- Create test directory
-    local temp_dir = os.getenv("TMPDIR") or "/tmp"
-    local test_dir = temp_dir .. "/codex_test/.codex/ide"
+    local temp_dir = original_getenv("TMPDIR") or "/tmp"
+    local test_config_dir = temp_dir .. "/codex_test/.codex"
+    -- テスト中はCODEX_CONFIG_DIRを固定し、実環境の設定に影響されないようにする
+    os.getenv = function(key)
+      if key == "CODEX_CONFIG_DIR" then
+        return test_config_dir
+      end
+      return original_getenv(key)
+    end
+
+    local test_dir = test_config_dir .. "/ide"
     os.execute("mkdir -p '" .. test_dir .. "'")
 
     -- Load the lockfile module for all tests
@@ -260,9 +271,12 @@ describe("Lockfile Module", function()
 
   teardown(function()
     -- Clean up test files
-    local temp_dir = os.getenv("TMPDIR") or "/tmp"
+    local temp_dir = original_getenv("TMPDIR") or "/tmp"
     local test_dir = temp_dir .. "/codex_test"
     os.execute("rm -rf '" .. test_dir .. "'")
+
+    -- 環境変数取得の差し替えを元に戻す
+    os.getenv = original_getenv
 
     -- Restore original vim
     if real_vim then

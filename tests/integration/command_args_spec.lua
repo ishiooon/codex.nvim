@@ -125,6 +125,10 @@ describe("Codex command arguments integration", function()
       create = function()
         return true, "/mock/path"
       end,
+      -- 認証トークン取得が呼ばれても落ちないように、簡易的な戻り値を返す
+      get_auth_token = function()
+        return false, nil, "auth token not available in test"
+      end,
       remove = function()
         return true
       end,
