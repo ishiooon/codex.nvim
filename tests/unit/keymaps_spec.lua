@@ -85,7 +85,7 @@ describe("codex.keymaps", function()
   end)
 
   it("ファイルツリー向けのキーマップをFileTypeで登録する", function()
-    -- neo-treeのみを対象とする
+    -- neo-treeとoilを対象とする
     keymaps.setup(config.defaults.keymaps)
 
     local group = vim._autocmds["CodexKeymaps"]
@@ -95,13 +95,17 @@ describe("codex.keymaps", function()
     expect(event).not_to_be_nil()
     expect(event.events).to_be("FileType")
 
+    local oil_event = find_filetype_autocmd(group, "oil")
+    expect(oil_event).not_to_be_nil()
+
     event.opts.callback()
     expect(vim._keymaps.n["<leader>cs"].rhs).to_be("<cmd>CodexTreeAdd<cr>")
     expect(vim._keymaps.n["<leader>cs"].opts.buffer).to_be(1)
   end)
 
   it("BufEnterでも対象ファイルタイプならキーマップを登録する", function()
-    add_buffer_with_filetype("neo-tree")
+    -- oilのバッファでも登録されることを確認する
+    add_buffer_with_filetype("oil")
 
     keymaps.setup(config.defaults.keymaps)
 

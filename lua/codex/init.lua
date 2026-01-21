@@ -706,9 +706,11 @@ function M._create_commands()
     local current_ft = (vim.bo and vim.bo.filetype) or ""
     local current_bufname = (vim.api and vim.api.nvim_buf_get_name and vim.api.nvim_buf_get_name(0)) or ""
 
-    -- neo-treeのみをツリー表示として判定する
+    -- neo-treeとoil.nvimをツリー表示として判定する
     local is_tree_buffer = current_ft == "neo-tree"
+      or current_ft == "oil"
       or string.match(current_bufname, "neo%-tree")
+      or string.match(current_bufname, "^oil://")
 
     if is_tree_buffer then
       local integrations = require("codex.integrations")
@@ -818,9 +820,11 @@ function M._create_commands()
     local current_ft = (vim.bo and vim.bo.filetype) or ""
     local current_bufname = (vim.api and vim.api.nvim_buf_get_name and vim.api.nvim_buf_get_name(0)) or ""
 
-    -- neo-treeのみをツリー表示として判定する
+    -- neo-treeとoil.nvimをツリー表示として判定する
     local is_tree_buffer = current_ft == "neo-tree"
+      or current_ft == "oil"
       or string.match(current_bufname, "neo%-tree")
+      or string.match(current_bufname, "^oil://")
 
     if is_tree_buffer then
       local integrations = require("codex.integrations")

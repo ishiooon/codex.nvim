@@ -27,12 +27,12 @@ Codex を Neovim から扱うための IDE 統合プラグインです。Claude 
       "<leader>cs",
       "<cmd>CodexTreeAdd<cr>",
       desc = "Codex: ファイルを追加",
-      ft = { "neo-tree" },
+      ft = { "neo-tree", "oil" },
     },
   },
 }
 ```
-neo-tree のポップアップ（filetype: neo-tree-popup）にも同じキーマップが適用されます。
+neo-tree のポップアップ（filetype: neo-tree-popup）にも同じキーマップが適用されます。oil.nvim（filetype: oil）でも同様に使えます。
 
 ## 要件
 
@@ -44,8 +44,8 @@ neo-tree のポップアップ（filetype: neo-tree-popup）にも同じキー�
 
 1. `:Codex` で Codex ターミナルを開きます
 2. 選択範囲をビジュアルモードで選び、`:CodexSend` で送信します
-3. ツリー表示（neo-tree）では `:CodexTreeAdd` が使えます
-neo-tree以外のツリー表示には対応しません。
+3. ツリー表示（neo-tree / oil.nvim）では `:CodexTreeAdd` が使えます
+neo-tree と oil.nvim のみ対応しています。
 
 ## ターミナルから前のウィンドウへ戻るキー
 
@@ -89,7 +89,7 @@ require("codex").setup({
 
 ## 感謝
 
-本プラグインは `claudecode.nvim` の設計と実装に大きく助けられました。開発者の皆さまに感謝します。
+本プラグインは `claudecode.nvim` の設計と実装に大きく助けられました。参考にしたリポジトリは https://github.com/coder/claudecode.nvim です。開発者の皆さまに感謝します。
 
 ---
 
@@ -121,7 +121,7 @@ will continue to be improved.
       "<leader>cs",
       "<cmd>CodexTreeAdd<cr>",
       desc = "Codex: Add file",
-      ft = { "neo-tree" },
+      ft = { "neo-tree", "oil" },
     },
   },
 }
@@ -137,8 +137,8 @@ will continue to be improved.
 
 1. Open the Codex terminal with `:Codex`
 2. Select text in visual mode and run `:CodexSend`
-3. From tree views (neo-tree), use `:CodexTreeAdd`
-Neo-tree is the only supported tree view.
+3. From tree views (neo-tree / oil.nvim), use `:CodexTreeAdd`
+Only neo-tree and oil.nvim are supported tree views.
 
 ## Specify Codex CLI path
 
@@ -162,4 +162,4 @@ require("codex").setup({
 
 ## Thanks
 
-This plugin is heavily inspired by the design and implementation of `claudecode.nvim`. Many thanks to its maintainers.
+This plugin is heavily inspired by the design and implementation of `claudecode.nvim`. The repository referenced is https://github.com/coder/claudecode.nvim. Many thanks to its maintainers.

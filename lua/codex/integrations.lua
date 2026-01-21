@@ -1,10 +1,10 @@
--- このファイルはneo-treeとの連携処理を提供します。
---- Tree integration module for Codex.nvim (neo-tree only).
+-- このファイルはneo-treeとoil.nvimの連携処理を提供します。
+--- Tree integration module for Codex.nvim (neo-tree and oil.nvim).
 ---@module 'codex.integrations'
 local M = {}
 local logger = require("codex.logger")
 
----現在のバッファがneo-treeの場合に選択ファイルを取得する
+---現在のバッファがneo-treeまたはoilの場合に選択ファイルを取得する
 ---@return table|nil files List of file paths, or nil if error
 ---@return string|nil error Error message if operation failed
 function M.get_selected_files_from_tree()
@@ -13,6 +13,11 @@ function M.get_selected_files_from_tree()
   if current_ft == "neo-tree" then
     -- neo-treeのみを対象にする
     return M._get_neotree_selection()
+  end
+
+  if current_ft == "oil" then
+    -- oil.nvimの選択ファイルを取得する
+    return M._get_oil_selection()
   end
 
   return nil, "Not in a supported tree buffer (current filetype: " .. current_ft .. ")"
@@ -198,6 +203,45 @@ function M._get_neotree_selection()
 
   logger.debug("integrations/neotree", "no file found under cursor/selection")
   return {}, "No file found under cursor"
+end
+
+---Get selected files from oil.nvim
+---Supports both visual selection and single file under cursor
+---@return table files List of file paths
+---@return string|nil error Error message if operation failed
+function M._get_oil_selection()
+  local success, oil = pcall(require, "oil")
+  if not success then
+    logger.debug("integrations/oil", "oil.nvim not available (require failed)")
+    return {}, "oil.nvim not available"
+  end
+
+  local bufnr = vim.api.nvim_get_current_buf()
+  local files = {}
+  local mode = vim.fn.mode()
+  local oil_selection = require("codex.oil_selection")
+
+  if mode == "V" or mode == "v" or mode == "\22" then
+    -- ビジュアル選択の行範囲からoil.nvimのエントリーを収集する
+    local visual_commands = require("codex.visual_commands")
+    local start_line, end_line = visual_commands.get_visual_range()
+    local range_files, range_err = oil_selection.collect_paths_from_range(oil, bufnr, start_line, end_line)
+    if range_err then
+      return range_files, range_err
+    end
+    if #range_files > 0 then
+      return range_files, nil
+    end
+  else
+    -- 通常モードはカーソル下のエントリーだけを扱う
+    local cursor_files, cursor_err = oil_selection.collect_paths_from_cursor(oil, bufnr)
+    if cursor_err then
+      return cursor_files, cursor_err
+    end
+    return cursor_files, nil
+  end
+
+  return files, "No file found under cursor"
 end
 
 return M

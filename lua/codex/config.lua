@@ -48,8 +48,8 @@ M.defaults = {
         lhs = "<leader>cs",
         rhs = "<cmd>CodexTreeAdd<cr>",
         desc = "Codex: ファイルを追加",
-        -- neo-treeのみを対象にする
-        filetypes = { "neo-tree" },
+        -- neo-treeとoil.nvimを対象にする
+        filetypes = { "neo-tree", "oil" },
       },
       -- 差分操作のキーマップは必要に応じて利用者側で追加する
     },

@@ -4,6 +4,7 @@
 ---@module 'codex.visual_commands'
 local M = {}
 local logger = require("codex.logger")
+local oil_selection = require("codex.oil_selection")
 
 ---Get current vim mode with fallback for test environments
 ---@param full_mode? boolean Whether to get full mode info (passed to vim.fn.mode)
@@ -147,8 +148,8 @@ function M.get_visual_range()
 end
 
 ---Check if we're in a tree buffer and get the tree state
----neo-treeのみを対象とする
----@return table? tree_state, string? tree_type ("neo-tree")
+---neo-treeとoil.nvimを対象とする
+---@return table? tree_state, string? tree_type ("neo-tree" | "oil")
 function M.get_tree_state()
   local current_ft = "" -- Default fallback
   local current_win = 0 -- Default fallback
@@ -189,9 +190,19 @@ function M.get_tree_state()
       )
       return nil, nil
     end
-  else
-    return nil, nil
   end
+
+  if current_ft == "oil" then
+    local oil_success, oil = pcall(require, "oil")
+    if not oil_success then
+      return nil, nil
+    end
+
+    -- oil.nvimのモジュールをツリー状態として返す
+    return oil, "oil"
+  end
+
+  return nil, nil
 end
 
 ---Create a visual command wrapper that follows neo-tree patterns
@@ -326,6 +337,14 @@ function M.get_files_from_visual_selection(visual_data)
       end
     end
     logger.debug("visual_commands/neotree", "files from visual selection:", files)
+  elseif tree_type == "oil" then
+    -- oil.nvimの表示行から選択範囲のパスを抽出する
+    local bufnr = vim.api.nvim_get_current_buf()
+    local range_files, range_err = oil_selection.collect_paths_from_range(tree_state, bufnr, start_pos, end_pos)
+    if range_err then
+      return {}, range_err
+    end
+    files = range_files
   end
 
   return files, nil
