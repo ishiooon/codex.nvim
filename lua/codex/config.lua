@@ -6,6 +6,7 @@
 ---@module 'codex.config'
 
 local M = {}
+local status_indicator_config = require("codex.status_indicator_config")
 
 ---@type CodexConfig
 M.defaults = {
@@ -54,6 +55,8 @@ M.defaults = {
       -- 差分操作のキーマップは必要に応じて利用者側で追加する
     },
   },
+  -- 画面右下に表示する状態アイコンの設定
+  status_indicator = status_indicator_config.defaults,
   terminal = nil, -- Will be lazy-loaded to avoid circular dependency
 }
 
@@ -234,6 +237,77 @@ function M.validate(config)
     end
   end
 
+  if config.status_indicator ~= nil then
+    assert(type(config.status_indicator) == "table", "status_indicator must be a table")
+    if config.status_indicator.enabled ~= nil then
+      assert(type(config.status_indicator.enabled) == "boolean", "status_indicator.enabled must be a boolean")
+    end
+    if config.status_indicator.update_interval_ms ~= nil then
+      assert(
+        type(config.status_indicator.update_interval_ms) == "number" and config.status_indicator.update_interval_ms > 0,
+        "status_indicator.update_interval_ms must be a positive number"
+      )
+    end
+    if config.status_indicator.busy_grace_ms ~= nil then
+      -- 最後の通信から動作中表示を維持する猶予時間の検証
+      assert(
+        type(config.status_indicator.busy_grace_ms) == "number" and config.status_indicator.busy_grace_ms >= 0,
+        "status_indicator.busy_grace_ms must be a non-negative number"
+      )
+    end
+    if config.status_indicator.cli_activity_grace_ms ~= nil then
+      -- CLIの入出力から動作中表示を維持する猶予時間の検証
+      assert(
+        type(config.status_indicator.cli_activity_grace_ms) == "number"
+          and config.status_indicator.cli_activity_grace_ms >= 0,
+        "status_indicator.cli_activity_grace_ms must be a non-negative number"
+      )
+    end
+    if config.status_indicator.turn_active_timeout_ms ~= nil then
+      -- 応答処理を継続表示する上限時間の検証
+      assert(
+        type(config.status_indicator.turn_active_timeout_ms) == "number"
+          and config.status_indicator.turn_active_timeout_ms >= 0,
+        "status_indicator.turn_active_timeout_ms must be a non-negative number"
+      )
+    end
+    if config.status_indicator.turn_idle_grace_ms ~= nil then
+      -- 応答停止後に動作中表示を解除する猶予時間の検証
+      assert(
+        type(config.status_indicator.turn_idle_grace_ms) == "number"
+          and config.status_indicator.turn_idle_grace_ms >= 0,
+        "status_indicator.turn_idle_grace_ms must be a non-negative number"
+      )
+    end
+    if config.status_indicator.inflight_timeout_ms ~= nil then
+      -- 実行中リクエストの停止判定の猶予時間の検証
+      assert(
+        type(config.status_indicator.inflight_timeout_ms) == "number"
+          and config.status_indicator.inflight_timeout_ms >= 0,
+        "status_indicator.inflight_timeout_ms must be a non-negative number"
+      )
+    end
+    if config.status_indicator.cli_notify_path ~= nil then
+      -- CLI通知ファイルパスの検証
+      assert(
+        type(config.status_indicator.cli_notify_path) == "string",
+        "status_indicator.cli_notify_path must be a string"
+      )
+    end
+    if config.status_indicator.offset_row ~= nil then
+      assert(type(config.status_indicator.offset_row) == "number", "status_indicator.offset_row must be a number")
+    end
+    if config.status_indicator.offset_col ~= nil then
+      assert(type(config.status_indicator.offset_col) == "number", "status_indicator.offset_col must be a number")
+    end
+    if config.status_indicator.icons ~= nil then
+      assert(type(config.status_indicator.icons) == "table", "status_indicator.icons must be a table")
+    end
+    if config.status_indicator.colors ~= nil then
+      assert(type(config.status_indicator.colors) == "table", "status_indicator.colors must be a table")
+    end
+  end
+
   return true
 end
 
@@ -273,6 +347,17 @@ function M.apply(user_config)
     -- Map open_in_current_tab -> open_in_new_tab (legacy option takes precedence)
     if type(d.open_in_current_tab) == "boolean" then
       d.open_in_new_tab = not d.open_in_current_tab
+    end
+  end
+
+  if config.status_indicator
+    and type(config.status_indicator.cli_notify_path) == "string"
+    and config.status_indicator.cli_notify_path ~= ""
+  then
+    -- CLI通知ファイルパスを環境変数に反映する
+    config.env = config.env or {}
+    if config.env.CODEX_NVIM_NOTIFY_PATH == nil then
+      config.env.CODEX_NVIM_NOTIFY_PATH = config.status_indicator.cli_notify_path
     end
   end
 

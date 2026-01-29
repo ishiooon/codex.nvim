@@ -1383,6 +1383,13 @@ function M.close_diff_by_tab_name(tab_name)
   return false
 end
 
+---現在の差分一覧を返します。
+---@return table active_diffs The active diffs table
+function M.get_active_diffs()
+  -- 状態表示の参照用に現在の差分一覧を返す
+  return active_diffs
+end
+
 ---Test helper function (only for testing)
 ---@return table active_diffs The active diffs table
 function M._get_active_diffs()

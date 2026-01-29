@@ -3,7 +3,8 @@
 
 local M = {}
 
-local CODEX_TERMINAL_VAR = "codex_terminal"
+local activity_hooks = require("codex.terminal.activity")
+local constants = require("codex.terminal.constants")
 -- Codex ターミナルの上部表示に使うラベル（アイコンと名称を一体化）
 local CODEX_DISPLAY_NAME = "󰆍 Codex"
 -- Codex ターミナルから前のウィンドウへ戻るための既定キー
@@ -37,7 +38,7 @@ local function buffer_name_includes_codex(buf_name)
 end
 
 local function read_codex_flag(bufnr)
-  local ok, value = pcall(vim.api.nvim_buf_get_var, bufnr, CODEX_TERMINAL_VAR)
+  local ok, value = pcall(vim.api.nvim_buf_get_var, bufnr, constants.CODEX_TERMINAL_VAR)
   if ok then
     return value == true
   end
@@ -45,7 +46,7 @@ local function read_codex_flag(bufnr)
 end
 
 local function set_codex_flag(bufnr)
-  pcall(vim.api.nvim_buf_set_var, bufnr, CODEX_TERMINAL_VAR, true)
+  pcall(vim.api.nvim_buf_set_var, bufnr, constants.CODEX_TERMINAL_VAR, true)
 end
 
 local function resolve_unfocus_key(opts)
@@ -110,6 +111,8 @@ function M.mark_terminal_buffer(bufnr, opts)
   end
   -- ターミナルから抜けるキーマップは設定に応じて切り替える
   set_unfocus_keymap(bufnr, opts)
+  -- 活動状態の更新に必要な監視を有効化する
+  activity_hooks.attach(bufnr)
 
   return true
 end

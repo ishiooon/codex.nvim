@@ -7,6 +7,7 @@ describe("codex.terminal (wrapper for Snacks.nvim)", function()
   local mock_codex_config_module
   local mock_snacks_provider
   local mock_native_provider
+  local mock_activity
   local last_created_mock_term_instance
   local create_mock_terminal_instance
 
@@ -222,6 +223,12 @@ describe("codex.terminal (wrapper for Snacks.nvim)", function()
         },
       },
     }
+
+    -- 応答開始の記録が呼ばれるか検証するためのモックを用意する
+    mock_activity = {
+      record_turn_start = spy.new(function() end),
+    }
+    package.loaded["codex.activity"] = mock_activity
 
     package.loaded["codex.terminal"] = nil
     package.loaded["codex.terminal.snacks"] = nil
@@ -628,6 +635,38 @@ describe("codex.terminal (wrapper for Snacks.nvim)", function()
       mock_snacks_provider.open:reset()
       terminal_wrapper.open()
       mock_snacks_provider.open:was_called(1)
+    end)
+  end)
+
+  describe("terminal.send", function()
+    it("submit=falseでは応答開始を記録しない", function()
+      -- 送信しない入力では応答開始の記録が行われないことを確認する
+      mock_activity.record_turn_start:reset()
+      terminal_wrapper.get_active_terminal_bufnr = spy.new(function()
+        return 1
+      end)
+      vim._buffers[1] = vim._buffers[1] or { options = {} }
+      vim.b[1] = { terminal_job_id = 99 }
+      vim.api.nvim_chan_send = spy.new(function() end)
+
+      local sent = terminal_wrapper.send("prefill", { submit = false })
+      assert.is_true(sent)
+      mock_activity.record_turn_start:was_not_called()
+    end)
+
+    it("submit=trueでは応答開始を記録する", function()
+      -- 実際の送信時のみ応答開始が記録されることを確認する
+      mock_activity.record_turn_start:reset()
+      terminal_wrapper.get_active_terminal_bufnr = spy.new(function()
+        return 1
+      end)
+      vim._buffers[1] = vim._buffers[1] or { options = {} }
+      vim.b[1] = { terminal_job_id = 99 }
+      vim.api.nvim_chan_send = spy.new(function() end)
+
+      local sent = terminal_wrapper.send("hello", { submit = true })
+      assert.is_true(sent)
+      mock_activity.record_turn_start:was_called(1)
     end)
   end)
 

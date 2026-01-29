@@ -23,7 +23,55 @@ M.state = {
   clients = {},
   handlers = {},
   ping_timer = nil,
+  activity = {
+    last_activity_ms = 0,
+    inflight_requests = 0,
+    deferred_responses = 0,
+  },
 }
+
+---現在時刻をミリ秒で取得します。
+---@return integer
+local function now_ms()
+  if vim.loop and type(vim.loop.now) == "function" then
+    return vim.loop.now()
+  end
+  return math.floor(os.time() * 1000)
+end
+
+---最終活動時刻を更新します。
+local function record_activity()
+  -- 最後の通信時刻を更新する
+  M.state.activity.last_activity_ms = now_ms()
+end
+
+---実行中リクエスト数を増やします。
+local function increment_inflight()
+  -- 実行中リクエスト数と最終活動時刻を更新する
+  M.state.activity.inflight_requests = (M.state.activity.inflight_requests or 0) + 1
+  record_activity()
+end
+
+---実行中リクエスト数を減らします。
+local function decrement_inflight()
+  -- 実行中リクエスト数の下限を0に保つ
+  local current = M.state.activity.inflight_requests or 0
+  M.state.activity.inflight_requests = math.max(0, current - 1)
+end
+
+---保留中レスポンス数を増やします。
+local function increment_deferred()
+  -- 保留中レスポンス数と最終活動時刻を更新する
+  M.state.activity.deferred_responses = (M.state.activity.deferred_responses or 0) + 1
+  record_activity()
+end
+
+---保留中レスポンス数を減らします。
+local function decrement_deferred()
+  -- 保留中レスポンス数の下限を0に保つ
+  local current = M.state.activity.deferred_responses or 0
+  M.state.activity.deferred_responses = math.max(0, current - 1)
+end
 
 ---Initialize the WebSocket server
 ---@param config CodexConfig Configuration options
@@ -36,6 +84,11 @@ function M.start(config, auth_token)
   end
 
   M.state.auth_token = auth_token
+  M.state.activity = {
+    last_activity_ms = 0,
+    inflight_requests = 0,
+    deferred_responses = 0,
+  }
 
   -- Log authentication state
   -- 認証モードをログに残し、接続不成立時の調査材料にする
@@ -127,6 +180,11 @@ function M.stop()
   M.state.port = nil
   M.state.auth_token = nil
   M.state.clients = {}
+  M.state.activity = {
+    last_activity_ms = 0,
+    inflight_requests = 0,
+    deferred_responses = 0,
+  }
 
   return true
 end
@@ -168,6 +226,7 @@ function M._handle_request(client, request)
   local method = request.method
   local params = request.params or {}
   local id = request.id
+  increment_inflight()
 
   local handler = M.state.handlers[method]
   if not handler then
@@ -176,6 +235,7 @@ function M._handle_request(client, request)
       message = "Method not found",
       data = "Unknown method: " .. tostring(method),
     })
+    decrement_inflight()
     return
   end
 
@@ -184,6 +244,7 @@ function M._handle_request(client, request)
     -- Check if this is a deferred response (blocking tool)
     if result and result._deferred then
       logger.debug("server", "Handler returned deferred response - storing for later")
+      increment_deferred()
       -- Store the request info for later response
       local deferred_info = {
         client = result.client,
@@ -202,12 +263,14 @@ function M._handle_request(client, request)
     else
       M.send_response(client, id, result, nil)
     end
+    decrement_inflight()
   else
     M.send_response(client, id, nil, {
       code = -32603,
       message = "Internal error",
       data = tostring(result), -- result contains error message when pcall fails
     })
+    decrement_inflight()
   end
 end
 
@@ -241,6 +304,8 @@ function M._setup_deferred_response(deferred_info)
         data = "Deferred response completed with unexpected format",
       })
     end
+    decrement_deferred()
+    decrement_inflight()
   end
 
   -- Store the response sender in a global location that won't be affected by module reloading
@@ -412,6 +477,9 @@ function M.get_status()
       running = false,
       port = nil,
       client_count = 0,
+      inflight_requests = 0,
+      deferred_responses = 0,
+      last_activity_ms = 0,
     }
   end
 
@@ -420,6 +488,9 @@ function M.get_status()
     port = M.state.port,
     client_count = tcp_server.get_client_count(M.state.server),
     clients = tcp_server.get_clients_info(M.state.server),
+    inflight_requests = M.state.activity.inflight_requests or 0,
+    deferred_responses = M.state.activity.deferred_responses or 0,
+    last_activity_ms = M.state.activity.last_activity_ms or 0,
   }
 end
 

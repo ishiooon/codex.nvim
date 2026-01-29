@@ -5,6 +5,7 @@
 
 local M = {}
 
+local activity = require("codex.activity")
 local terminal_buffer = require("codex.terminal.buffer")
 
 ---@type CodexTerminalConfig
@@ -753,6 +754,10 @@ function M.send(text, opts)
     payload = payload .. "\n"
   end
 
+  -- 実際に送信する場合のみ応答開始として記録する
+  if submit then
+    activity.record_turn_start()
+  end
   vim.api.nvim_chan_send(job_id, payload)
   return true
 end

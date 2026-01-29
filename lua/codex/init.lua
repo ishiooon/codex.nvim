@@ -378,6 +378,11 @@ function M.setup(opts)
 
   logger.setup(M.state.config)
 
+  local indicator_ok, indicator = pcall(require, "codex.status_indicator")
+  if indicator_ok and type(indicator.setup) == "function" then
+    indicator.setup(M.state.config.status_indicator)
+  end
+
   -- Setup terminal module: always try to call setup to pass terminal_cmd and env,
   -- even if terminal_opts (for split_side etc.) are not provided.
   -- Map top-level cwd-related aliases into terminal config for convenience
@@ -562,6 +567,11 @@ function M.stop()
   if not success then
     logger.error("init", "Failed to stop Codex integration: " .. error)
     return false, error
+  end
+
+  local indicator_ok, indicator = pcall(require, "codex.status_indicator")
+  if indicator_ok and type(indicator.stop) == "function" then
+    indicator.stop()
   end
 
   M.state.server = nil

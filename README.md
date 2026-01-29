@@ -1,4 +1,4 @@
-# codex.nvim (English)
+# codex.nvim
 
 <!-- 操作イメージは主要な操作の流れが一目で分かる短い録画を掲載する -->
 ![操作イメージ](codex.nvim.gif)
@@ -66,6 +66,39 @@ require("codex").setup({
   },
 })
 ```
+## Status indicator (busy/wait)
+
+正確な動作中/待機表示のために、Codex CLI の通知設定は必須です。通知設定が無い場合は応答中の判定ができないため、動作中/待機の表示は保証されません。
+Codex.nvim 側で通知ファイルのパスと環境変数を揃え、Codex CLI が通知 JSON を追記するようにしてください。
+```lua
+require("codex").setup({
+  env = {
+    CODEX_NVIM_NOTIFY_PATH = "/tmp/codex.nvim/notify.jsonl",
+  },
+  status_indicator = {
+    cli_notify_path = "/tmp/codex.nvim/notify.jsonl",
+    -- 応答処理中の表示を維持する最大時間（ミリ秒）
+    turn_active_timeout_ms = 300000,
+    -- 応答停止後に動作中表示を解除する猶予時間（ミリ秒）
+    turn_idle_grace_ms = 2000,
+    -- 実行中リクエストが古い場合に動作中表示を解除する猶予時間（ミリ秒）
+    inflight_timeout_ms = 300000,
+  },
+})
+```
+
+Codex CLI config example:
+
+```
+notify = ["sh", "/path/to/codex.nvim/scripts/codex_notify.sh"]
+```
+
+通知イベントは現時点で `agent-turn-complete` のみ対応のため、応答開始は入力検知で補完します。
+
+外部ターミナルを使う場合、NeovimからCodex CLIの出力を観測できないため、動作中表示は通知イベントだけに依存します。
+通知設定が無い場合、応答中フラグは使わず入出力の猶予時間のみで判定します。
+
+When a diff is pending (user choice), the indicator shows ◐.
 
 
 ## Thanks
@@ -74,8 +107,7 @@ This plugin is heavily inspired by the design and implementation of `claudecode.
 
 ---
 
-# codex.nvim
-
+# codex.nvim [japanese]
 Codex を Neovim から扱うための IDE 統合プラグインです。Claude Code 用に作られた設計を踏襲しつつ、Codex 用に調整しています。
 今後も改善を続ける予定です。
 
@@ -161,6 +193,31 @@ require("codex").setup({
   },
 })
 ```
+
+## 状態アイコン（動作中/選択待ち）
+
+動作中や選択待ちを正しく表示するには、Codex CLI の notify を使って完了イベントを通知する必要があります。プラグインに通知ファイルのパスと環境変数を設定し、Codex CLI 側でそのファイルへ追記する設定を行ってください。
+
+```lua
+require("codex").setup({
+  env = {
+    CODEX_NVIM_NOTIFY_PATH = "/tmp/codex.nvim/notify.jsonl",
+  },
+  status_indicator = {
+    cli_notify_path = "/tmp/codex.nvim/notify.jsonl",
+  },
+})
+```
+
+Codex CLI の設定例:
+
+```
+notify = ["sh", "/path/to/codex.nvim/scripts/codex_notify.sh"]
+```
+
+通知イベントは現時点で `agent-turn-complete` のみ対応のため、応答開始は入力検知で補完します。
+
+差分の選択待ち（承認/拒否の保留）がある場合は ◐ を表示します。
 
 
 ## 感謝

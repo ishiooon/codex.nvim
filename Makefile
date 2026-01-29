@@ -7,7 +7,13 @@ all: format check test
 
 # Detect if we are already inside a Nix shell
 ifeq (,$(IN_NIX_SHELL))
+# nix が利用できる場合だけ Nix 環境を使う
+ifneq ($(shell command -v nix 2>/dev/null),)
 NIX_PREFIX := nix develop .#ci -c
+else
+NIX_PREFIX :=
+NIX_MISSING := 1
+endif
 else
 NIX_PREFIX :=
 endif
@@ -26,6 +32,13 @@ format:
 # Run tests
 test:
 	@echo "Running all tests..."
+	@if [ -n "$(NIX_MISSING)" ]; then \
+		echo "nix が見つからないためローカルの busted を使用します"; \
+		if ! command -v busted >/dev/null 2>&1; then \
+			echo "busted が見つかりません。luarocks などでインストールしてください。"; \
+			exit 127; \
+		fi; \
+	fi
 	@export LUA_PATH="./lua/?.lua;./lua/?/init.lua;./?.lua;./?/init.lua;$$LUA_PATH"; \
 	TEST_FILES=$$(find tests -type f -name "*_test.lua" -o -name "*_spec.lua" | sort); \
 	echo "Found test files:"; \

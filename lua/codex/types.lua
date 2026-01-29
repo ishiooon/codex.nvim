@@ -40,6 +40,21 @@
 ---@field enabled boolean
 ---@field mappings CodexKeymap[]
 
+-- 状態アイコンの設定
+---@class CodexStatusIndicatorConfig
+---@field enabled boolean
+---@field update_interval_ms number
+---@field busy_grace_ms number
+---@field cli_activity_grace_ms number
+---@field turn_active_timeout_ms number
+---@field turn_idle_grace_ms number
+---@field inflight_timeout_ms number
+---@field cli_notify_path string|nil
+---@field offset_row number
+---@field offset_col number
+---@field icons table<string, string>
+---@field colors table<string, string|nil>
+
 -- Log level type alias
 ---@alias CodexLogLevel "trace"|"debug"|"info"|"warn"|"error"
 
@@ -115,6 +130,9 @@
 ---@field port integer?
 ---@field client_count integer
 ---@field clients? table<string, any>
+---@field inflight_requests? integer
+---@field deferred_responses? integer
+---@field last_activity_ms? integer
 
 -- Main configuration structure
 ---@class CodexConfig
@@ -134,6 +152,7 @@
 ---@field diff_opts CodexDiffOptions
 ---@field models CodexModelOption[]
 ---@field keymaps CodexKeymapsConfig|false|nil
+---@field status_indicator CodexStatusIndicatorConfig|nil
 ---@field disable_broadcast_debouncing? boolean
 ---@field enable_broadcast_debouncing_in_tests? boolean
 ---@field terminal CodexTerminalConfig?
