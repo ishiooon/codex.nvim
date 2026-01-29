@@ -1,7 +1,7 @@
 # codex.nvim
 
 <!-- 操作イメージは主要な操作の流れが一目で分かる短い録画を掲載する -->
-![操作イメージ](codex.nvim.gif)
+![操作イメージ](codex.nvim_light.gif)
 
 A Neovim IDE integration for Codex. It follows the original architecture of the Claude Code integration and adapts it for Codex.
 will continue to be improved.
