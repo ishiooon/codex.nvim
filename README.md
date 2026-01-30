@@ -68,8 +68,8 @@ require("codex").setup({
 ```
 ## Status indicator (busy/wait)
 
-正確な動作中/待機表示のために、Codex CLI の通知設定は必須です。通知設定が無い場合は応答中の判定ができないため、動作中/待機の表示は保証されません。
-Codex.nvim 側で通知ファイルのパスと環境変数を揃え、Codex CLI が通知 JSON を追記するようにしてください。
+Accurate busy/wait display requires Codex CLI notify events. Without notify configuration, codex.nvim cannot reliably detect active responses, so the busy/wait indicator is not guaranteed.
+Set the notify file path and environment variable in codex.nvim, and configure Codex CLI to append JSON events to that file.
 ```lua
 require("codex").setup({
   env = {
@@ -77,11 +77,11 @@ require("codex").setup({
   },
   status_indicator = {
     cli_notify_path = "/tmp/codex.nvim/notify.jsonl",
-    -- 応答処理中の表示を維持する最大時間（ミリ秒）
+    -- Maximum time to keep the busy indicator during a response (milliseconds)
     turn_active_timeout_ms = 300000,
-    -- 応答停止後に動作中表示を解除する猶予時間（ミリ秒）
+    -- Grace period before clearing busy after output stops (milliseconds)
     turn_idle_grace_ms = 2000,
-    -- 実行中リクエストが古い場合に動作中表示を解除する猶予時間（ミリ秒）
+    -- Grace period to ignore stale inflight requests (milliseconds)
     inflight_timeout_ms = 300000,
   },
 })
@@ -93,10 +93,10 @@ Codex CLI config example:
 notify = ["sh", "/path/to/codex.nvim/scripts/codex_notify.sh"]
 ```
 
-通知イベントは現時点で `agent-turn-complete` のみ対応のため、応答開始は入力検知で補完します。
+Only `agent-turn-complete` is handled for now, so response start is inferred from input.
 
-外部ターミナルを使う場合、NeovimからCodex CLIの出力を観測できないため、動作中表示は通知イベントだけに依存します。
-通知設定が無い場合、応答中フラグは使わず入出力の猶予時間のみで判定します。
+When using an external terminal, Neovim cannot observe Codex CLI output, so the busy indicator relies solely on notify events.
+If notify is not configured, busy is inferred only from input/output grace periods.
 
 When a diff is pending (user choice), the indicator shows ◐.
 
