@@ -8,6 +8,7 @@ local state = {
   path = nil,
   offset = 0,
   on_event = nil,
+  poll_interval_ms = 200,
 }
 
 local function decode_json_line(line)
@@ -47,6 +48,17 @@ local function read_notify_lines(path)
   handle:close()
 end
 
+local function seek_to_file_end(path)
+  local handle = io.open(path, "r")
+  if not handle then
+    state.offset = 0
+    return
+  end
+  -- 既存履歴は読み飛ばし、監視開始後の追記だけを扱う
+  state.offset = handle:seek("end") or 0
+  handle:close()
+end
+
 ---通知ファイルの監視を開始します。
 ---@param path string
 ---@param on_event fun(event: table)
@@ -61,13 +73,14 @@ function M.start(path, on_event)
   state.path = path
   state.offset = 0
   state.on_event = on_event
+  seek_to_file_end(path)
   state.watcher = vim.loop.new_fs_poll()
   if not state.watcher then
     return
   end
 
   -- 通知ファイルの更新を監視し、イベントを読み取る
-  state.watcher:start(path, 1000, function()
+  state.watcher:start(path, state.poll_interval_ms, function()
     vim.schedule(function()
       read_notify_lines(path)
     end)

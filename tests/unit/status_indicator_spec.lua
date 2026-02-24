@@ -248,4 +248,265 @@ describe("Codex status indicator", function()
     assert(pending == false)
     package.loaded["codex.diff"] = nil
   end)
+
+  it("複数インスタンスのアイコンとホバー情報を構築できる", function()
+    local options = {
+      icons = {
+        idle = "○",
+        busy = "●",
+        wait = "◐",
+        disconnected = "✕",
+      },
+      colors = {
+        idle = nil,
+        busy = "DiagnosticInfo",
+        wait = "DiagnosticWarn",
+        disconnected = "DiagnosticError",
+      },
+    }
+    local display = indicator._build_multi_display(
+      "busy",
+      options,
+      {
+        { port = 41000, pid = 1001, workspace = "/tmp/current" },
+        { port = 41001, pid = 1002, workspace = "/tmp/other" },
+      },
+      { running = true, port = 41000 },
+      1001,
+      "/tmp/current"
+    )
+
+    assert(display.text == "● ○")
+    assert(type(display.highlights) == "table")
+    assert(#display.highlights == 1)
+    assert(type(display.hover_lines) == "table")
+    assert(#display.hover_lines == 2)
+    assert(display.hover_lines[1]:find("●", 1, true))
+    assert(display.hover_lines[1]:find("/tmp/current", 1, true))
+    assert(display.hover_lines[1]:find("この画面", 1, true))
+    assert(display.hover_lines[2]:find("○", 1, true))
+    assert(display.hover_lines[2]:find("/tmp/other", 1, true))
+  end)
+
+  it("ロック情報がなくてもローカルの実行状態を補完できる", function()
+    local options = {
+      icons = {
+        idle = "○",
+        busy = "●",
+        wait = "◐",
+        disconnected = "✕",
+      },
+      colors = {},
+    }
+    local display = indicator._build_multi_display("idle", options, {}, { running = true, port = 42000 }, 2001, "/tmp/local")
+
+    assert(display.text == "○")
+    assert(#display.hover_lines == 1)
+    assert(display.hover_lines[1]:find("○", 1, true))
+    assert(display.hover_lines[1]:find("/tmp/local", 1, true))
+    assert(display.hover_lines[1]:find("この画面", 1, true))
+  end)
+
+  it("接続が無くインスタンス一覧も空なら切断アイコンを表示する", function()
+    local options = {
+      icons = {
+        idle = "○",
+        busy = "●",
+        wait = "◐",
+        disconnected = "✕",
+      },
+      colors = {},
+    }
+    local display = indicator._build_multi_display("disconnected", options, {}, { running = false }, 0, "")
+
+    assert(display.text == "✕")
+    assert(#display.hover_lines == 1)
+    assert(display.hover_lines[1]:find("起動中のCodex", 1, true))
+  end)
+
+  it("マルチバイトアイコンでもハイライト位置をバイト列で計算する", function()
+    local original_strdisplaywidth = vim.fn.strdisplaywidth
+    vim.fn.strdisplaywidth = function(text)
+      if text == "○" or text == "●" or text == "◐" or text == "✕" then
+        return 1
+      end
+      if text == "○ ●" or text == "● ○" then
+        return 3
+      end
+      return #text
+    end
+    local ok, err = pcall(function()
+      local options = {
+        icons = {
+          idle = "○",
+          busy = "●",
+          wait = "◐",
+          disconnected = "✕",
+        },
+        colors = {
+          idle = nil,
+          busy = "DiagnosticInfo",
+        },
+      }
+      local display = indicator._build_multi_display(
+        "busy",
+        options,
+        {
+          { port = 41000, pid = 1001, workspace = "/tmp/current" },
+          { port = 41001, pid = 1002, workspace = "/tmp/other" },
+        },
+        { running = true, port = 41001 },
+        1002,
+        "/tmp/other"
+      )
+      -- "○ ●" では先頭エントリが3バイト、空白が1バイト
+      assert(display.text == "○ ●")
+      assert(#display.highlights == 1)
+      assert(display.highlights[1].start_col == 4)
+      assert(display.highlights[1].end_col == 7)
+    end)
+    vim.fn.strdisplaywidth = original_strdisplaywidth
+    assert(ok, err)
+  end)
+
+  it("切断アイコン単体のハイライト終端もバイト列で計算する", function()
+    local original_strdisplaywidth = vim.fn.strdisplaywidth
+    vim.fn.strdisplaywidth = function(text)
+      if text == "✕" then
+        return 1
+      end
+      return #text
+    end
+    local ok, err = pcall(function()
+      local options = {
+        icons = {
+          idle = "○",
+          busy = "●",
+          wait = "◐",
+          disconnected = "✕",
+        },
+        colors = {
+          disconnected = "DiagnosticError",
+        },
+      }
+      local display = indicator._build_multi_display("disconnected", options, {}, { running = false }, 0, "")
+      -- "✕" は UTF-8 で3バイト
+      assert(display.text == "✕")
+      assert(#display.highlights == 1)
+      assert(display.highlights[1].start_col == 0)
+      assert(display.highlights[1].end_col == 3)
+    end)
+    vim.fn.strdisplaywidth = original_strdisplaywidth
+    assert(ok, err)
+  end)
+
+  it("他画面の状態を行ごとに反映できる", function()
+    local options = {
+      icons = {
+        idle = "○",
+        busy = "●",
+        wait = "◐",
+        disconnected = "✕",
+      },
+      colors = {
+        idle = nil,
+        busy = "DiagnosticInfo",
+        wait = "DiagnosticWarn",
+      },
+    }
+    local display = indicator._build_multi_display(
+      "busy",
+      options,
+      {
+        { port = 50000, pid = 3001, workspace = "/tmp/current", status = "busy" },
+        { port = 50001, pid = 3002, workspace = "/tmp/other", status = "wait" },
+      },
+      { running = true, port = 50000 },
+      3001,
+      "/tmp/current"
+    )
+    assert(display.text == "● ◐")
+    assert(#display.highlights == 2)
+    assert(display.hover_lines[2]:find("状態:wait", 1, true))
+  end)
+
+  it("Codex画面が表示中なら下部枠モードを選ぶ", function()
+    local original_getbufinfo = vim.fn.getbufinfo
+    local original_terminal_module = package.loaded["codex.terminal"]
+    vim.fn.getbufinfo = function(_)
+      return { { windows = { 1000 } } }
+    end
+    package.loaded["codex.terminal"] = {
+      get_active_terminal_bufnr = function()
+        return 42
+      end,
+    }
+    local ok, err = pcall(function()
+      local mode = indicator._resolve_view_mode()
+      assert(mode == "panel")
+    end)
+    vim.fn.getbufinfo = original_getbufinfo
+    package.loaded["codex.terminal"] = original_terminal_module
+    assert(ok, err)
+  end)
+
+  it("Codex画面が表示中なら下部枠の対象ウィンドウIDを返す", function()
+    local original_getbufinfo = vim.fn.getbufinfo
+    local original_terminal_module = package.loaded["codex.terminal"]
+    vim.fn.getbufinfo = function(_)
+      return { { windows = { 1000, 2002 } } }
+    end
+    package.loaded["codex.terminal"] = {
+      get_active_terminal_bufnr = function()
+        return 42
+      end,
+    }
+    local ok, err = pcall(function()
+      local winid = indicator._resolve_panel_target_winid()
+      assert(winid == 1000)
+    end)
+    vim.fn.getbufinfo = original_getbufinfo
+    package.loaded["codex.terminal"] = original_terminal_module
+    assert(ok, err)
+  end)
+
+  it("Codex画面が閉じているなら下部枠の対象ウィンドウIDはnilになる", function()
+    local original_getbufinfo = vim.fn.getbufinfo
+    local original_terminal_module = package.loaded["codex.terminal"]
+    vim.fn.getbufinfo = function(_)
+      return { { windows = {} } }
+    end
+    package.loaded["codex.terminal"] = {
+      get_active_terminal_bufnr = function()
+        return 42
+      end,
+    }
+    local ok, err = pcall(function()
+      local winid = indicator._resolve_panel_target_winid()
+      assert(winid == nil)
+    end)
+    vim.fn.getbufinfo = original_getbufinfo
+    package.loaded["codex.terminal"] = original_terminal_module
+    assert(ok, err)
+  end)
+
+  it("Codex画面が閉じているなら右下フロートモードを選ぶ", function()
+    local original_getbufinfo = vim.fn.getbufinfo
+    local original_terminal_module = package.loaded["codex.terminal"]
+    vim.fn.getbufinfo = function(_)
+      return { { windows = {} } }
+    end
+    package.loaded["codex.terminal"] = {
+      get_active_terminal_bufnr = function()
+        return 42
+      end,
+    }
+    local ok, err = pcall(function()
+      local mode = indicator._resolve_view_mode()
+      assert(mode == "floating")
+    end)
+    vim.fn.getbufinfo = original_getbufinfo
+    package.loaded["codex.terminal"] = original_terminal_module
+    assert(ok, err)
+  end)
 end)

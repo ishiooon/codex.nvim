@@ -5,6 +5,7 @@ local M = {}
 
 local defaults = require("codex.status_indicator_config").defaults
 local activity = require("codex.activity")
+local instances = require("codex.status_indicator_instances")
 
 ---状態判定のみを行います。
 ---@param server_status table|nil
@@ -125,6 +126,15 @@ function M.get_turn_active_since_ms()
     return activity.get_turn_active_since_ms()
   end
   return 0
+end
+
+---ロックファイルを基に稼働中インスタンスを取得します。
+---@return table[]
+function M.list_running_instances()
+  if instances and type(instances.list_running) == "function" then
+    return instances.list_running()
+  end
+  return {}
 end
 
 ---ユーザー選択待ちが発生しているかを判定します。

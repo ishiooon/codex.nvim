@@ -40,22 +40,31 @@ end
 
 local function apply_notify_event(event)
   if type(event) ~= "table" then
-    return
+    return false
   end
   if event.type == "agent-turn-complete" or event.type == "turn/completed" or event.type == "turn/cancelled" then
     M.record_turn_complete()
-    return
+    return true
   end
   if event.type == "turn/started" then
     M.record_turn_start()
+    return true
   end
+  return false
 end
 
 ---通知ファイルの監視を開始します。
 ---@param path string
-function M.start_notify_watcher(path)
+---@param on_state_change fun(event: table)|nil
+function M.start_notify_watcher(path, on_state_change)
   -- 通知ファイル監視を開始し、イベントを反映する
-  notify.start(path, apply_notify_event)
+  notify.start(path, function(event)
+    local changed = apply_notify_event(event)
+    -- 状態が変わった場合のみ表示更新のきっかけを通知する
+    if changed and type(on_state_change) == "function" then
+      on_state_change(event)
+    end
+  end)
 end
 
 ---通知ファイルの監視を停止します。
