@@ -18,7 +18,7 @@ will continue to be improved.
 
 ```lua
 {
-  dir = "/home/dev_local/dev_plugin/codex.nvim",
+  "ishiooon/codex.nvim",
   dependencies = { "folke/snacks.nvim" },
   config = true,
   keys = {
@@ -124,7 +124,7 @@ Codex を Neovim から扱うための IDE 統合プラグインです。Claude 
 <!-- 既定のキーマップ例は動作確認済みのものだけ記載しています。 -->
 ```lua
 {
-  dir = "/home/dev_local/dev_plugin/codex.nvim",
+  "ishiooon/codex.nvim",
   dependencies = { "folke/snacks.nvim" },
   config = true,
   keys = {
