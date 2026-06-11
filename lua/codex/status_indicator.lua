@@ -245,7 +245,9 @@ function M.start()
     activity.start_notify_watcher(state.options.cli_notify_path, update_from_notify_event)
   end
 
-  M.update()
+  vim.schedule(function()
+    M.update()
+  end)
 end
 
 ---状態表示を停止します。
