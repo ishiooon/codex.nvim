@@ -1,4 +1,9 @@
 # このファイルはCodex.nvimの開発で不要な生成物を除外するための設定をまとめています。
+# Neovim の headless 実行時に自動生成されるログは、検証のたびに内容が変わるため除外します。
+.nvimlog
+# Superpowers の設計メモと実装計画は作業用の一時資料なので、配布対象から除外します。
+docs/superpowers/
+
 # Compiled Lua sources
 luac.out
 
@@ -39,4 +44,3 @@ luac.out
 *.i*86
 *.x86_64
 *.hex
-
