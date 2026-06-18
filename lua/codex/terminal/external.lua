@@ -34,7 +34,7 @@ function M.open(cmd_string, env_table)
     -- External terminal is already running, we can't focus it programmatically
     -- Just log that it's already running
     logger.debug("terminal", "External Codex terminal is already running")
-    return
+    return true
   end
 
   -- Get external terminal command from provider_opts
@@ -45,7 +45,7 @@ function M.open(cmd_string, env_table)
       "external_terminal_cmd not configured. Please set terminal.provider_opts.external_terminal_cmd in your config.",
       vim.log.levels.ERROR
     )
-    return
+    return false
   end
 
   local cmd_parts
@@ -58,7 +58,7 @@ function M.open(cmd_string, env_table)
     local result = external_cmd(cmd_string, env_table)
     if not result then
       vim.notify("external_terminal_cmd function returned nil or false", vim.log.levels.ERROR)
-      return
+      return false
     end
 
     -- Result can be either a string or a table
@@ -75,12 +75,12 @@ function M.open(cmd_string, env_table)
         "external_terminal_cmd function must return a string or table, got: " .. type(result),
         vim.log.levels.ERROR
       )
-      return
+      return false
     end
   elseif type(external_cmd) == "string" then
     if external_cmd == "" then
       vim.notify("external_terminal_cmd string cannot be empty", vim.log.levels.ERROR)
-      return
+      return false
     end
 
     -- Count the number of %s placeholders and format accordingly
@@ -90,7 +90,7 @@ function M.open(cmd_string, env_table)
 
     if placeholder_count == 0 then
       vim.notify("external_terminal_cmd must contain '%s' placeholder(s) for the command.", vim.log.levels.ERROR)
-      return
+      return false
     elseif placeholder_count == 1 then
       -- Backward compatible: just the command
       full_command = string.format(external_cmd, cmd_string)
@@ -107,13 +107,13 @@ function M.open(cmd_string, env_table)
         ),
         vim.log.levels.ERROR
       )
-      return
+      return false
     end
 
     cmd_parts = vim.split(full_command, " ")
   else
     vim.notify("external_terminal_cmd must be a string or function, got: " .. type(external_cmd), vim.log.levels.ERROR)
-    return
+    return false
   end
 
   -- Start the external terminal as a detached process
@@ -136,8 +136,9 @@ function M.open(cmd_string, env_table)
   if not jobid or jobid <= 0 then
     vim.notify("Failed to start external terminal with command: " .. full_command, vim.log.levels.ERROR)
     cleanup_state()
-    return
+    return false
   end
+  return true
 end
 
 function M.close()
@@ -170,6 +171,14 @@ function M.focus_toggle(cmd_string, env_table, effective_config)
   -- For external terminals, focus toggle behaves the same as simple toggle
   -- since we can't detect or control focus of external windows
   M.simple_toggle(cmd_string, env_table, effective_config)
+end
+
+--- 外部ターミナルはNeovim側から幅を制御できないため、起動だけに揃える
+---@param cmd_string string
+---@param env_table table
+---@param effective_config table
+function M.maximize_toggle(cmd_string, env_table, effective_config)
+  return M.open(cmd_string, env_table, effective_config, true)
 end
 
 --- Legacy toggle function for backward compatibility

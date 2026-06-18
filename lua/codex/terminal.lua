@@ -6,12 +6,15 @@
 local M = {}
 
 local activity = require("codex.activity")
+local terminal_size = require("codex.terminal.size")
 local terminal_buffer = require("codex.terminal.buffer")
 
 ---@type CodexTerminalConfig
 local defaults = {
   split_side = "right",
   split_width_percentage = 0.30,
+  maximized_width_percentage = 0.96,
+  maximized_height_percentage = 0.96,
   provider = "auto",
   show_native_term_exit_tip = true,
   terminal_cmd = nil,
@@ -34,6 +37,8 @@ M.defaults = defaults
 
 -- Lazy load providers
 local providers = {}
+local terminal_is_maximized = false
+local is_callable
 
 ---Loads a terminal provider module
 ---@param provider_name string The name of the provider to load
@@ -92,6 +97,13 @@ local function validate_and_enhance_provider(provider)
   if not enhanced_provider.toggle then
     enhanced_provider.toggle = function(cmd_string, env_table, effective_config)
       return enhanced_provider.simple_toggle(cmd_string, env_table, effective_config)
+    end
+  end
+
+  -- 古いカスタムプロバイダでも画面サイズ切替コマンドで壊れないようにする
+  if not enhanced_provider.maximize_toggle then
+    enhanced_provider.maximize_toggle = function(cmd_string, env_table, effective_config)
+      return enhanced_provider.open(cmd_string, env_table, effective_config)
     end
   end
 
@@ -211,6 +223,8 @@ local function build_config(opts_override)
       split_width_percentage = function(val)
         return type(val) == "number" and val > 0 and val < 1
       end,
+      maximized_width_percentage = terminal_size.is_valid_percentage,
+      maximized_height_percentage = terminal_size.is_valid_percentage,
       snacks_win_opts = function(val)
         return type(val) == "table"
       end,
@@ -239,7 +253,10 @@ local function build_config(opts_override)
       end,
     }
     for key, val in pairs(opts_override) do
-      if effective_config[key] ~= nil and validators[key] and validators[key](val) then
+      if key == "maximized_split_width_percentage" and terminal_size.is_valid_percentage(val) then
+        -- 旧設定名を使っている利用者の設定は、モーダル表示の幅として引き継ぐ
+        effective_config.maximized_width_percentage = val
+      elseif effective_config[key] ~= nil and validators[key] and validators[key](val) then
         effective_config[key] = val
       end
     end
@@ -278,6 +295,8 @@ local function build_config(opts_override)
   return {
     split_side = effective_config.split_side,
     split_width_percentage = effective_config.split_width_percentage,
+    maximized_width_percentage = effective_config.maximized_width_percentage,
+    maximized_height_percentage = effective_config.maximized_height_percentage,
     auto_close = effective_config.auto_close,
     snacks_win_opts = effective_config.snacks_win_opts,
     cwd = resolved_cwd,
@@ -319,13 +338,58 @@ local function derive_codex_config_dir(lock_dir)
   return normalized
 end
 
+---ターミナルが表示中かどうかを、Neovimのバッファ情報から取得します。
+---@param provider CodexTerminalProvider
+---@return boolean|nil
+local function get_provider_terminal_visibility(provider)
+  if not (provider and is_callable(provider.get_active_bufnr)) then
+    return nil
+  end
+  if not (vim.fn and vim.fn.getbufinfo) then
+    return nil
+  end
+
+  local active_bufnr = provider.get_active_bufnr()
+  if not active_bufnr then
+    return false
+  end
+
+  local bufinfo = vim.fn.getbufinfo(active_bufnr)
+  local info = bufinfo and bufinfo[1]
+  if not info then
+    return false
+  end
+  return info.windows and #info.windows > 0
+end
+
+---次に適用する拡大状態を決めます。
+---@param provider CodexTerminalProvider
+---@return boolean
+local function resolve_next_maximized_state(provider)
+  local visible = get_provider_terminal_visibility(provider)
+  if visible == false then
+    return true
+  end
+  return not terminal_is_maximized
+end
+
+---拡大状態に対応するターミナル設定を作成します。
+---@param opts_override table?
+---@param should_maximize boolean
+---@return table
+local function build_maximize_config(opts_override, should_maximize)
+  local effective_config = build_config(opts_override)
+  effective_config.is_maximized = should_maximize
+  return effective_config
+end
+
 -- 直近で起動したCodexの接続ポートを保持し、再起動時に整合性を取る
 local last_sse_port = nil
 local has_launched = false
 
 ---関数として呼び出せる値かどうか判定する
 ---@return boolean
-local function is_callable(value)
+is_callable = function(value)
   if type(value) == "function" then
     return true
   end
@@ -463,6 +527,8 @@ end
 ---@param p_terminal_cmd string? The command to run in the terminal (from main config).
 ---@param p_env table? Custom environment variables to pass to the terminal (from main config).
 function M.setup(user_term_config, p_terminal_cmd, p_env)
+  terminal_is_maximized = false
+
   if user_term_config == nil then -- Allow nil, default to empty table silently
     user_term_config = {}
   elseif type(user_term_config) ~= "table" then -- Warn if it's not nil AND not a table
@@ -505,6 +571,25 @@ function M.setup(user_term_config, p_terminal_cmd, p_env)
           "codex.terminal.setup: Invalid value for split_width_percentage: " .. tostring(v),
           vim.log.levels.WARN
         )
+      end
+    elseif k == "maximized_width_percentage" then
+      if terminal_size.is_valid_percentage(v) then
+        defaults.maximized_width_percentage = v
+      else
+        vim.notify("codex.terminal.setup: Invalid value for maximized_width_percentage: " .. tostring(v), vim.log.levels.WARN)
+      end
+    elseif k == "maximized_height_percentage" then
+      if terminal_size.is_valid_percentage(v) then
+        defaults.maximized_height_percentage = v
+      else
+        vim.notify("codex.terminal.setup: Invalid value for maximized_height_percentage: " .. tostring(v), vim.log.levels.WARN)
+      end
+    elseif k == "maximized_split_width_percentage" then
+      if terminal_size.is_valid_percentage(v) then
+        -- 旧設定名を使っている場合でも、モーダル表示の幅として扱う
+        defaults.maximized_width_percentage = v
+      else
+        vim.notify("codex.terminal.setup: Invalid value for maximized_split_width_percentage: " .. tostring(v), vim.log.levels.WARN)
       end
     elseif k == "provider" then
       if type(v) == "table" or v == "snacks" or v == "native" or v == "external" or v == "auto" or v == "none" then
@@ -666,6 +751,35 @@ function M.focus_toggle(opts_override, cmd_args)
   local cmd_string, codex_env_table = get_codex_command_and_env(cmd_args, current_port)
 
   provider.focus_toggle(cmd_string, codex_env_table, effective_config)
+  if current_port then
+    last_sse_port = current_port
+    has_launched = true
+  end
+end
+
+---Codexターミナルを通常分割表示と大きなモーダル表示で切り替えます。
+---@param opts_override table? Overrides for terminal appearance.
+---@param cmd_args string? Arguments to append to the codex command.
+function M.maximize_toggle(opts_override, cmd_args)
+  local provider = get_provider()
+  local current_port = get_current_sse_port()
+  local should_maximize = resolve_next_maximized_state(provider)
+  local effective_config = build_maximize_config(opts_override, should_maximize)
+
+  -- 接続ポートが変わった場合は既存ターミナルを再起動する
+  restart_terminal_if_port_changed(provider, current_port)
+  local cmd_string, codex_env_table = get_codex_command_and_env(cmd_args, current_port)
+
+  if is_callable(provider.maximize_toggle) then
+    local did_toggle = provider.maximize_toggle(cmd_string, codex_env_table, effective_config)
+    if did_toggle == false then
+      return
+    end
+  else
+    provider.open(cmd_string, codex_env_table, effective_config)
+  end
+
+  terminal_is_maximized = should_maximize
   if current_port then
     last_sse_port = current_port
     has_launched = true

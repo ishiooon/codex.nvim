@@ -43,6 +43,15 @@ function M.focus_toggle(cmd_string, env_table, effective_config)
   -- intentionally no-op
 end
 
+---Maximize toggle (no-op)
+---@param cmd_string string
+---@param env_table table
+---@param effective_config CodexTerminalConfig
+function M.maximize_toggle(cmd_string, env_table, effective_config)
+  -- intentionally no-op
+  return false
+end
+
 ---Legacy toggle (no-op)
 ---@param cmd_string string
 ---@param env_table table

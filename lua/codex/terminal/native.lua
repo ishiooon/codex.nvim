@@ -7,6 +7,7 @@ local M = {}
 local logger = require("codex.logger")
 local utils = require("codex.utils")
 local terminal_buffer = require("codex.terminal.buffer")
+local terminal_window = require("codex.terminal.window")
 
 local bufnr = nil
 local winid = nil
@@ -217,38 +218,38 @@ local function show_hidden_terminal(effective_config, focus)
     return true
   end
 
-  local original_win = vim.api.nvim_get_current_win()
-
-  -- Create a new window for the existing buffer
-  local width = math.floor(vim.o.columns * effective_config.split_width_percentage)
-  local full_height = vim.o.lines
-  local placement_modifier
-
-  if effective_config.split_side == "left" then
-    placement_modifier = "topleft "
-  else
-    placement_modifier = "botright "
-  end
-
-  vim.cmd(placement_modifier .. width .. "vsplit")
-  local new_winid = vim.api.nvim_get_current_win()
-  vim.api.nvim_win_set_height(new_winid, full_height)
-
-  -- Set the existing buffer in the new window
-  vim.api.nvim_win_set_buf(new_winid, bufnr)
-  winid = new_winid
-
-  if focus then
-    -- Focus the terminal: switch to terminal window and enter insert mode
-    vim.api.nvim_set_current_win(winid)
-    vim.cmd("startinsert")
-  else
-    -- Preserve user context: return to the window they were in before showing terminal
-    vim.api.nvim_set_current_win(original_win)
-  end
-
+  winid = terminal_window.open_existing_buffer_in_split(bufnr, effective_config, focus)
   logger.debug("terminal", "Showed hidden terminal in new window")
-  return true
+  return winid ~= nil
+end
+
+local function show_terminal_in_modal(effective_config, focus)
+  if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
+    return false
+  end
+
+  -- 表示先を切り替えるため、現在のウィンドウだけを閉じてバッファとジョブは残す
+  terminal_window.close_window(winid)
+  winid = terminal_window.open_existing_buffer_in_float(bufnr, effective_config, focus)
+  return winid ~= nil
+end
+
+local function show_terminal_in_split(effective_config, focus)
+  if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
+    return false
+  end
+
+  -- モーダルから戻す場合も、同じバッファを通常の分割ウィンドウへ移し替える
+  terminal_window.close_window(winid)
+  winid = terminal_window.open_existing_buffer_in_split(bufnr, effective_config, focus)
+  return winid ~= nil
+end
+
+local function show_terminal_for_maximized_state(effective_config, focus)
+  if effective_config.is_maximized then
+    return show_terminal_in_modal(effective_config, focus)
+  end
+  return show_terminal_in_split(effective_config, focus)
 end
 
 local function find_existing_codex_terminal()
@@ -418,6 +419,39 @@ function M.focus_toggle(cmd_string, env_table, effective_config)
       end
     end
   end
+end
+
+---Codexターミナルを通常分割表示と大きなモーダル表示で切り替える
+---@param cmd_string string
+---@param env_table table
+---@param effective_config CodexTerminalConfig
+function M.maximize_toggle(cmd_string, env_table, effective_config)
+  if bufnr and vim.api.nvim_buf_is_valid(bufnr) and show_terminal_for_maximized_state(effective_config, true) then
+    return true
+  end
+
+  local existing_buf, existing_win = find_existing_codex_terminal()
+  if existing_buf and existing_win then
+    bufnr = existing_buf
+    winid = existing_win
+    terminal_buffer.mark_terminal_buffer(existing_buf, effective_config)
+    return show_terminal_for_maximized_state(effective_config, true)
+  end
+
+  if effective_config.is_maximized then
+    if open_terminal(cmd_string, env_table, effective_config, false) and show_terminal_in_modal(effective_config, true) then
+      return true
+    end
+  elseif open_terminal(cmd_string, env_table, effective_config) then
+    return true
+  end
+
+  if effective_config.is_maximized then
+    vim.notify("Failed to open Codex terminal modal using native fallback (maximize_toggle).", vim.log.levels.ERROR)
+  else
+    vim.notify("Failed to open Codex terminal using native fallback (maximize_toggle).", vim.log.levels.ERROR)
+  end
+  return false
 end
 
 --- Legacy toggle function for backward compatibility (defaults to simple_toggle)

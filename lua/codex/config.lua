@@ -42,6 +42,7 @@ M.defaults = {
     mappings = {
       { mode = "n", lhs = "<leader>cc", rhs = "<cmd>Codex<cr>", desc = "Codex: Toggle" },
       { mode = "n", lhs = "<leader>cf", rhs = "<cmd>CodexFocus<cr>", desc = "Codex: Focus" },
+      { mode = "n", lhs = "<leader>cm", rhs = "<cmd>CodexMaximizeToggle<cr>", desc = "Codex: Toggle modal" },
       -- 既定キーマップは動作確認済みのコマンドに限定する
       { mode = "v", lhs = "<leader>cs", rhs = "<cmd>CodexSend<cr>", desc = "Codex: 選択範囲を送信" },
       {

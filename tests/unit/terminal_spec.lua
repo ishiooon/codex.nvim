@@ -280,6 +280,9 @@ describe("codex.terminal (wrapper for Snacks.nvim)", function()
       focus_toggle = spy.new(function(cmd, env_table, config, opts_override)
         return create_mock_terminal_instance(cmd, { env = env_table })
       end),
+      maximize_toggle = spy.new(function(cmd, env_table, config, opts_override)
+        return create_mock_terminal_instance(cmd, { env = env_table })
+      end),
       get_active_bufnr = spy.new(function()
         return nil
       end),
@@ -299,6 +302,7 @@ describe("codex.terminal (wrapper for Snacks.nvim)", function()
       toggle = spy.new(function() end),
       simple_toggle = spy.new(function() end),
       focus_toggle = spy.new(function() end),
+      maximize_toggle = spy.new(function() end),
       get_active_bufnr = spy.new(function()
         return nil
       end),
@@ -635,6 +639,81 @@ describe("codex.terminal (wrapper for Snacks.nvim)", function()
       mock_snacks_provider.open:reset()
       terminal_wrapper.open()
       mock_snacks_provider.open:was_called(1)
+    end)
+  end)
+
+  describe("terminal.maximize_toggle", function()
+    it("通常表示から96パーセントのモーダル表示へ切り替える", function()
+      terminal_wrapper.setup({ split_width_percentage = 0.3 })
+
+      terminal_wrapper.maximize_toggle()
+
+      mock_snacks_provider.maximize_toggle:was_called(1)
+      local config_arg = mock_snacks_provider.maximize_toggle:get_call(1).refs[3]
+      assert.is_true(config_arg.is_maximized)
+      assert.are.equal(0.3, config_arg.split_width_percentage)
+      assert.are.equal(0.96, config_arg.maximized_width_percentage)
+      assert.are.equal(0.96, config_arg.maximized_height_percentage)
+    end)
+
+    it("モーダル表示から通常表示へ切り替える", function()
+      terminal_wrapper.setup({ split_width_percentage = 0.3 })
+
+      terminal_wrapper.maximize_toggle()
+      mock_snacks_provider.get_active_bufnr = spy.new(function()
+        return 123
+      end)
+      vim.fn.getbufinfo = function()
+        return { { windows = { 1000 } } }
+      end
+      terminal_wrapper.maximize_toggle()
+
+      mock_snacks_provider.maximize_toggle:was_called(2)
+      local config_arg = mock_snacks_provider.maximize_toggle:get_call(2).refs[3]
+      assert.is_false(config_arg.is_maximized)
+      assert.are.equal(0.3, config_arg.split_width_percentage)
+    end)
+
+    it("前回モーダル状態でもターミナルが無ければモーダル表示で開く", function()
+      terminal_wrapper.setup({ split_width_percentage = 0.3 })
+
+      terminal_wrapper.maximize_toggle()
+      terminal_wrapper.maximize_toggle()
+
+      mock_snacks_provider.maximize_toggle:was_called(2)
+      local config_arg = mock_snacks_provider.maximize_toggle:get_call(2).refs[3]
+      assert.is_true(config_arg.is_maximized)
+    end)
+
+    it("プロバイダの切替に失敗した場合は内部状態を反転しない", function()
+      terminal_wrapper.setup({ split_width_percentage = 0.3 })
+      mock_snacks_provider.get_active_bufnr = spy.new(function()
+        return 123
+      end)
+      vim.fn.getbufinfo = function()
+        return { { windows = { 1000 } } }
+      end
+      mock_snacks_provider.maximize_toggle = spy.new(function()
+        return false
+      end)
+
+      terminal_wrapper.maximize_toggle()
+      terminal_wrapper.maximize_toggle()
+
+      mock_snacks_provider.maximize_toggle:was_called(2)
+      local config_arg = mock_snacks_provider.maximize_toggle:get_call(2).refs[3]
+      assert.is_true(config_arg.is_maximized)
+    end)
+
+    it("呼び出し時に指定したモーダルの幅と高さを優先する", function()
+      terminal_wrapper.setup({ split_width_percentage = 0.3 })
+
+      terminal_wrapper.maximize_toggle({ maximized_width_percentage = 0.75, maximized_height_percentage = 0.8 })
+
+      mock_snacks_provider.maximize_toggle:was_called(1)
+      local config_arg = mock_snacks_provider.maximize_toggle:get_call(1).refs[3]
+      assert.are.equal(0.75, config_arg.maximized_width_percentage)
+      assert.are.equal(0.8, config_arg.maximized_height_percentage)
     end)
   end)
 

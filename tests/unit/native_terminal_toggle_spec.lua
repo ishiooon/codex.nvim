@@ -21,6 +21,8 @@ describe("codex.terminal.native toggle behavior", function()
       next_winid = 1000,
       next_jobid = 10000,
       buffer_options = {},
+      last_open_win_config = nil,
+      last_open_win_enter = nil,
     }
 
     -- Mock vim API with stateful behavior
@@ -67,9 +69,30 @@ describe("codex.terminal.native toggle behavior", function()
             mock_state.buffer_options[bufnr][option] = value
           end
         end,
+        nvim_create_buf = function(listed, scratch)
+          local bufnr = mock_state.next_bufnr
+          mock_state.next_bufnr = mock_state.next_bufnr + 1
+          mock_state.buffers[bufnr] = { name = "", options = {}, listed = listed, scratch = scratch }
+          return bufnr
+        end,
         nvim_win_get_buf = function(winid)
           local win = mock_state.windows[winid]
           return win and win.bufnr or 0
+        end,
+        nvim_open_win = function(bufnr, enter, window_config)
+          local winid = mock_state.next_winid
+          mock_state.next_winid = mock_state.next_winid + 1
+          mock_state.windows[winid] = { bufnr = bufnr, config = window_config }
+          mock_state.last_open_win_config = window_config
+          mock_state.last_open_win_enter = enter
+          if enter then
+            mock_state.current_win = winid
+          end
+          return winid
+        end,
+        nvim_win_get_config = function(winid)
+          local win = mock_state.windows[winid]
+          return win and win.config or {}
         end,
         nvim_win_close = function(winid, force)
           -- Remove window from state (simulates window closing)
@@ -455,6 +478,81 @@ describe("codex.terminal.native toggle behavior", function()
       native_provider.simple_toggle(cmd_string, env_table, config)
 
       -- Should have shown the existing terminal
+      assert.are.equal(initial_bufnr, native_provider.get_active_bufnr())
+      assert.is_true(vsplit_called)
+    end)
+  end)
+
+  describe("maximize_toggle behavior", function()
+    it("既存ターミナルを96パーセントのフローティングモーダルで表示する", function()
+      local cmd_string = "codex"
+      local env_table = { TEST = "value" }
+      local normal_config = { split_side = "right", split_width_percentage = 0.3 }
+      local modal_config = {
+        split_side = "right",
+        split_width_percentage = 0.3,
+        is_maximized = true,
+        maximized_width_percentage = 0.96,
+        maximized_height_percentage = 0.96,
+      }
+
+      native_provider.open(cmd_string, env_table, normal_config)
+      local initial_bufnr = native_provider.get_active_bufnr()
+      local mock_state = _G.get_mock_state()
+
+      local split_winid = nil
+      for winid, win in pairs(mock_state.windows) do
+        if win.bufnr == initial_bufnr then
+          split_winid = winid
+          break
+        end
+      end
+      assert.is_not_nil(split_winid)
+
+      native_provider.maximize_toggle(cmd_string, env_table, modal_config)
+
+      assert.are.equal(initial_bufnr, native_provider.get_active_bufnr())
+      assert.is_nil(mock_state.windows[split_winid])
+      assert.is_true(mock_state.last_open_win_enter)
+      assert.are.equal("editor", mock_state.last_open_win_config.relative)
+      assert.are.equal(115, mock_state.last_open_win_config.width)
+      assert.are.equal(38, mock_state.last_open_win_config.height)
+      assert.are.equal(2, mock_state.last_open_win_config.col)
+      assert.are.equal(1, mock_state.last_open_win_config.row)
+    end)
+
+    it("フローティングモーダルから通常の分割表示へ戻す", function()
+      local cmd_string = "codex"
+      local env_table = { TEST = "value" }
+      local modal_config = {
+        split_side = "right",
+        split_width_percentage = 0.3,
+        is_maximized = true,
+        maximized_width_percentage = 0.96,
+        maximized_height_percentage = 0.96,
+      }
+      local normal_config = {
+        split_side = "right",
+        split_width_percentage = 0.3,
+        is_maximized = false,
+        maximized_width_percentage = 0.96,
+        maximized_height_percentage = 0.96,
+      }
+
+      native_provider.maximize_toggle(cmd_string, env_table, modal_config)
+      local initial_bufnr = native_provider.get_active_bufnr()
+
+      local vsplit_called = false
+      local original_cmd = mock_vim.cmd
+      mock_vim.cmd = function(command)
+        if command:match("vsplit") then
+          vsplit_called = true
+        end
+        original_cmd(command)
+      end
+
+      native_provider.maximize_toggle(cmd_string, env_table, normal_config)
+
       assert.are.equal(initial_bufnr, native_provider.get_active_bufnr())
       assert.is_true(vsplit_called)
     end)

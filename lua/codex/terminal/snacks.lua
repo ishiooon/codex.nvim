@@ -7,6 +7,7 @@ local M = {}
 local snacks_available, Snacks = pcall(require, "snacks")
 local utils = require("codex.utils")
 local terminal_buffer = require("codex.terminal.buffer")
+local terminal_window = require("codex.terminal.window")
 local terminal = nil
 
 --- @return boolean
@@ -76,6 +77,40 @@ local function build_opts(config, env_table, focus)
       },
     } --[[@as snacks.win.Config]], config.snacks_win_opts or {}),
   } --[[@as snacks.terminal.Opts]]
+end
+
+local function has_terminal_buffer()
+  return terminal and terminal:buf_valid() and terminal.buf and vim.api.nvim_buf_is_valid(terminal.buf)
+end
+
+local function replace_terminal_window(open_window)
+  if not has_terminal_buffer() then
+    return false
+  end
+
+  -- Snacksのターミナルバッファは残し、表示中のウィンドウだけを差し替える
+  terminal_window.close_window(terminal.win)
+  terminal.win = open_window(terminal.buf)
+  return terminal.win ~= nil
+end
+
+local function show_terminal_in_modal(config, focus)
+  return replace_terminal_window(function(bufnr)
+    return terminal_window.open_existing_buffer_in_float(bufnr, config, focus)
+  end)
+end
+
+local function show_terminal_in_split(config, focus)
+  return replace_terminal_window(function(bufnr)
+    return terminal_window.open_existing_buffer_in_split(bufnr, config, focus)
+  end)
+end
+
+local function show_terminal_for_maximized_state(config, focus)
+  if config.is_maximized then
+    return show_terminal_in_modal(config, focus)
+  end
+  return show_terminal_in_split(config, focus)
 end
 
 function M.setup()
@@ -243,6 +278,27 @@ function M.focus_toggle(cmd_string, env_table, config)
     logger.debug("terminal", "Focus toggle: creating new terminal")
     M.open(cmd_string, env_table, config)
   end
+end
+
+---Codexターミナルを通常分割表示と大きなモーダル表示で切り替える
+---@param cmd_string string
+---@param env_table table
+---@param config table
+function M.maximize_toggle(cmd_string, env_table, config)
+  if not is_available() then
+    vim.notify("Snacks.nvim terminal provider selected but Snacks.terminal not available.", vim.log.levels.ERROR)
+    return false
+  end
+
+  if has_terminal_buffer() and show_terminal_for_maximized_state(config, true) then
+    return true
+  end
+
+  M.open(cmd_string, env_table, config, false)
+  if has_terminal_buffer() and show_terminal_for_maximized_state(config, true) then
+    return true
+  end
+  return false
 end
 
 ---Legacy toggle function for backward compatibility (defaults to simple_toggle)

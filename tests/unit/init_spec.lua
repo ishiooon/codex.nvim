@@ -298,10 +298,12 @@ describe("codex.init", function()
         toggle = spy.new(function() end),
         simple_toggle = spy.new(function() end),
         focus_toggle = spy.new(function() end),
+        maximize_toggle = spy.new(function() end),
         open = spy.new(function() end),
         close = spy.new(function() end),
         setup = spy.new(function() end),
         ensure_visible = spy.new(function() end),
+        defaults = {},
       }
 
       local original_require = _G.require
@@ -406,6 +408,25 @@ describe("codex.init", function()
       assert.is_equal("--flag1 --flag2", call_args[2], "Second argument should be the command args")
     end)
 
+    it("CodexMaximizeToggleコマンドからターミナルのサイズ切替を呼び出す", function()
+      local codex = require("codex")
+      codex.setup({ auto_start = false })
+
+      local command_handler
+      for _, call in ipairs(vim.api.nvim_create_user_command.calls) do
+        if call.vals[1] == "CodexMaximizeToggle" then
+          command_handler = call.vals[2]
+          break
+        end
+      end
+
+      assert.is_function(command_handler, "CodexMaximizeToggle command should be registered")
+
+      command_handler({})
+
+      assert(#mock_terminal.maximize_toggle.calls > 0, "terminal.maximize_toggle was not called")
+    end)
+
     it("should handle empty arguments gracefully", function()
       local codex = require("codex")
       codex.setup({ auto_start = false })
@@ -476,6 +497,7 @@ describe("codex.init", function()
         focus_toggle = spy.new(function() end),
         open = spy.new(function() end),
         close = spy.new(function() end),
+        defaults = {},
       }
 
       -- Mock vim.ui.select to automatically select the first model

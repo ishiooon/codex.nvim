@@ -1125,6 +1125,18 @@ function M._create_commands()
       desc = "Smart focus/toggle Codex terminal (switches to terminal if not focused, hides if focused)",
     })
 
+    vim.api.nvim_create_user_command("CodexMaximizeToggle", function(opts)
+      local current_mode = vim.fn.mode()
+      if current_mode == "v" or current_mode == "V" or current_mode == "\22" then
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+      end
+      local cmd_args = opts.args and opts.args ~= "" and opts.args or nil
+      terminal.maximize_toggle({}, cmd_args)
+    end, {
+      nargs = "*",
+      desc = "Toggle Codex terminal between split and modal display",
+    })
+
     vim.api.nvim_create_user_command("CodexOpen", function(opts)
       local cmd_args = opts.args and opts.args ~= "" and opts.args or nil
       terminal.open({}, cmd_args)

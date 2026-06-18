@@ -97,6 +97,7 @@
 ---@field toggle fun(cmd_string: string, env_table: table, effective_config: CodexTerminalConfig)
 ---@field simple_toggle fun(cmd_string: string, env_table: table, effective_config: CodexTerminalConfig)
 ---@field focus_toggle fun(cmd_string: string, env_table: table, effective_config: CodexTerminalConfig)
+---@field maximize_toggle? fun(cmd_string: string, env_table: table, effective_config: CodexTerminalConfig): boolean|nil
 ---@field get_active_bufnr fun(): number?
 ---@field is_available fun(): boolean
 ---@field ensure_visible? function
@@ -106,6 +107,9 @@
 ---@class CodexTerminalConfig
 ---@field split_side CodexSplitSide
 ---@field split_width_percentage number
+---@field maximized_width_percentage number
+---@field maximized_height_percentage number
+---@field is_maximized boolean|nil -- Codex ターミナルを大きなモーダル表示へ切り替える一時状態
 ---@field provider CodexTerminalProviderName|CodexTerminalProvider
 ---@field show_native_term_exit_tip boolean
 ---@field terminal_cmd string?

@@ -24,6 +24,7 @@ will continue to be improved.
   keys = {
     { "<leader>cc", "<cmd>Codex<cr>", desc = "Codex: Toggle" },
     { "<leader>cf", "<cmd>CodexFocus<cr>", desc = "Codex: Focus" },
+    { "<leader>cm", "<cmd>CodexMaximizeToggle<cr>", desc = "Codex: Toggle modal" },
     { "<leader>cs", "<cmd>CodexSend<cr>", mode = "v", desc = "Codex: Send selection" },
     {
       "<leader>cs",
@@ -130,6 +131,7 @@ Codex を Neovim から扱うための IDE 統合プラグインです。Claude 
   keys = {
     { "<leader>cc", "<cmd>Codex<cr>", desc = "Codex: Toggle" },
     { "<leader>cf", "<cmd>CodexFocus<cr>", desc = "Codex: Focus" },
+    { "<leader>cm", "<cmd>CodexMaximizeToggle<cr>", desc = "Codex: モーダル表示を切替" },
     { "<leader>cs", "<cmd>CodexSend<cr>", mode = "v", desc = "Codex: 選択範囲を送信" },
     {
       "<leader>cs",
@@ -163,6 +165,19 @@ neo-tree と oil.nvim のみ対応しています。
 require("codex").setup({
   terminal = {
     unfocus_key = "<D-]>", -- Cmd-] でフォーカスを戻す
+  },
+})
+```
+
+## Codex ターミナルを大きく表示する
+
+`<leader>cm` または `:CodexMaximizeToggle` で、Codex ターミナルを通常の右分割表示と 96% サイズのモーダル表示で切り替えられます。
+
+```lua
+require("codex").setup({
+  terminal = {
+    maximized_width_percentage = 0.96,
+    maximized_height_percentage = 0.96,
   },
 })
 ```
