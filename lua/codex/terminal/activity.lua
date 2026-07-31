@@ -107,7 +107,7 @@ local function ensure_enter_mapping(bufnr)
     noremap = true,
     silent = true,
     replace_keycodes = false,
-    desc = "Codex: Enter 送信時の応答開始を記録する",
+    desc = "Codex: Track response start when submitting with Enter",
   })
   enter_mapped_buffers[bufnr] = true
 end

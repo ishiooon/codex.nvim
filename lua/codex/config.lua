@@ -34,7 +34,7 @@ M.defaults = {
     on_new_file_reject = "keep_empty", -- "keep_empty" leaves an empty buffer; "close_window" closes the placeholder split
   },
   models = {
-    { name = "デフォルト（Codex CLI の設定に従う）", value = "" },
+    { name = "Default (use Codex CLI settings)", value = "" },
   },
   -- Codexの既定キーマップ定義
   keymaps = {
@@ -44,12 +44,12 @@ M.defaults = {
       { mode = "n", lhs = "<leader>cf", rhs = "<cmd>CodexFocus<cr>", desc = "Codex: Focus" },
       { mode = "n", lhs = "<leader>cm", rhs = "<cmd>CodexMaximizeToggle<cr>", desc = "Codex: Toggle modal" },
       -- 既定キーマップは動作確認済みのコマンドに限定する
-      { mode = "v", lhs = "<leader>cs", rhs = "<cmd>CodexSend<cr>", desc = "Codex: 選択範囲を送信" },
+      { mode = "v", lhs = "<leader>cs", rhs = "<cmd>CodexSend<cr>", desc = "Codex: Send selection" },
       {
         mode = "n",
         lhs = "<leader>cs",
         rhs = "<cmd>CodexTreeAdd<cr>",
-        desc = "Codex: ファイルを追加",
+        desc = "Codex: Add file",
         -- neo-treeとoil.nvimを対象にする
         filetypes = { "neo-tree", "oil" },
       },

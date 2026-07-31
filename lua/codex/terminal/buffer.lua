@@ -88,7 +88,7 @@ local function set_unfocus_keymap(bufnr, opts)
     buffer = bufnr,
     noremap = true,
     silent = true,
-    desc = "Codex: ターミナルから前のウィンドウへ戻る",
+    desc = "Codex: Return to the previous window from the terminal",
   })
 end
 
