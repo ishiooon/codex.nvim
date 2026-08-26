@@ -233,7 +233,7 @@ end
 ---@return string[]
 local function normalize_panel_lines(lines)
   if type(lines) ~= "table" or #lines == 0 then
-    return { "起動中のCodexはありません" }
+    return { "No Codex instances are running" }
   end
   local max_lines = 10
   if #lines <= max_lines then
@@ -243,7 +243,7 @@ local function normalize_panel_lines(lines)
   for index = 1, max_lines do
     normalized[#normalized + 1] = lines[index]
   end
-  normalized[#normalized + 1] = string.format("... 他 %d 件", #lines - max_lines)
+  normalized[#normalized + 1] = string.format("... %d more", #lines - max_lines)
   return normalized
 end
 
@@ -548,7 +548,7 @@ function M.start()
   vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
     group = state.autocmd_group,
     callback = refresh_layout,
-    desc = "Codex 状態表示の位置を再計算する",
+    desc = "Recalculate the Codex status display position",
   })
 end
 

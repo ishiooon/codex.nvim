@@ -365,7 +365,7 @@ function M._build_multi_display(local_status, options, instances, server_status,
     return {
       text = text,
       highlights = highlights,
-      hover_lines = { "起動中のCodexはありません" },
+      hover_lines = { "No Codex instances are running" },
     }
   end
 
@@ -392,11 +392,11 @@ function M._build_multi_display(local_status, options, instances, server_status,
     end
     local resolved_workspace = row.workspace
     if type(resolved_workspace) ~= "string" or resolved_workspace == "" then
-      resolved_workspace = "(環境情報なし)"
+      resolved_workspace = "(environment unavailable)"
     end
-    local details = { "状態:" .. status_key }
+    local details = { "Status: " .. status_key }
     if row.is_current then
-      table.insert(details, "この画面")
+      table.insert(details, "This window")
     end
     if row.port then
       table.insert(details, "port:" .. tostring(row.port))

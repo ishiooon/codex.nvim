@@ -846,7 +846,7 @@ function M.send(text, opts)
   end
 
   if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
-    require("codex.logger").warn("terminal", "Codex ターミナルが見つからないため送信できません")
+    require("codex.logger").warn("terminal", "Cannot send because the Codex terminal was not found")
     return false
   end
 
@@ -859,7 +859,7 @@ function M.send(text, opts)
   end
 
   if not job_id then
-    require("codex.logger").warn("terminal", "Codex ターミナルのジョブIDが取得できません")
+    require("codex.logger").warn("terminal", "Could not get the Codex terminal job ID")
     return false
   end
 
